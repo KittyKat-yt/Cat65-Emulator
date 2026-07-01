@@ -55,6 +55,11 @@ public class SerialTerminal extends WindowWithTitle {
                 }
             } else if (c == '\f') {
                 terminal.clear();
+            } else if ((c == 0x08) || (c == 0x7f)) {
+                int len = terminal.getLength();
+                if (len > 0) {
+                    terminal.deleteText(len - 1, len);
+                }
             } else {
                 terminal.appendText(String.valueOf(c));
             }
