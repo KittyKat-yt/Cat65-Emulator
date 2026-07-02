@@ -42,7 +42,7 @@ public class CPU extends WindowWithTitle {
                     new OpcodeDef(this::address_zp,   5, new int[]{0x06}, null),
                     new OpcodeDef(this::address_zpX,  6, new int[]{0x16}, null),
                     new OpcodeDef(this::address_abs,  6, new int[]{0x0e}, null),
-                    new OpcodeDef(this::address_absX, 7, new int[]{0x1e}, null),
+                    new OpcodeDef(this::address_absX, 6, new int[]{0x1e}, null),
             }),
             new OpcodeType(this::B__, new OpcodeDef[] {
                     new OpcodeDef(null, 2, new int[]{0x10}, "NC"),  // BPL
@@ -58,7 +58,7 @@ public class CPU extends WindowWithTitle {
                     new OpcodeDef(this::value_zp,  3, new int[]{0x24}, null),
                     new OpcodeDef(this::value_abs, 4, new int[]{0x2c}, null),
 
-                    new OpcodeDef(this::value_imm,  2, new int[]{0x89}, null),
+                    new OpcodeDef(this::value_imm,  2, new int[]{0x89}, "#"),
                     new OpcodeDef(this::value_absX, 4, new int[]{0x3c}, null),
                     new OpcodeDef(this::value_zpX,  4, new int[]{0x34}, null),
             }),
@@ -91,7 +91,7 @@ public class CPU extends WindowWithTitle {
                     new OpcodeDef(this::address_zp,   5, new int[]{0xc6}, null),
                     new OpcodeDef(this::address_zpX,  6, new int[]{0xd6}, null),
                     new OpcodeDef(this::address_abs,  6, new int[]{0xce}, null),
-                    new OpcodeDef(this::address_absX, 7, new int[]{0xde}, null),
+                    new OpcodeDef(this::address_absX, 6, new int[]{0xde}, null),
 
                     new OpcodeDef(null, 2, new int[]{0x3a}, null),
             }),
@@ -128,7 +128,7 @@ public class CPU extends WindowWithTitle {
                     new OpcodeDef(this::address_zp,   5, new int[]{0xe6}, null),
                     new OpcodeDef(this::address_zpX,  6, new int[]{0xf6}, null),
                     new OpcodeDef(this::address_abs,  6, new int[]{0xee}, null),
-                    new OpcodeDef(this::address_absX, 7, new int[]{0xfe}, null),
+                    new OpcodeDef(this::address_absX, 6, new int[]{0xfe}, null),
 
                     new OpcodeDef(null, 2, new int[]{0x1a}, null),
             }),
@@ -140,7 +140,7 @@ public class CPU extends WindowWithTitle {
             }),
             new OpcodeType(this::JMP, new OpcodeDef[] {
                     new OpcodeDef(this::address_abs, 3, new int[]{0x4c}, null),
-                    new OpcodeDef(this::address_ind, 5, new int[]{0x6c}, null),
+                    new OpcodeDef(this::address_ind, 6, new int[]{0x6c}, null),
 
                     new OpcodeDef(this::address_absXInd, 6, new int[]{0x7c}, null),
             }),
@@ -178,7 +178,7 @@ public class CPU extends WindowWithTitle {
                     new OpcodeDef(this::address_zp,   5, new int[]{0x46}, null),
                     new OpcodeDef(this::address_zpX,  6, new int[]{0x56}, null),
                     new OpcodeDef(this::address_abs,  6, new int[]{0x4e}, null),
-                    new OpcodeDef(this::address_absX, 7, new int[]{0x5e}, null),
+                    new OpcodeDef(this::address_absX, 6, new int[]{0x5e}, null),
             }),
             new OpcodeType(this::NOP, new OpcodeDef[] {
                     new OpcodeDef(null,     1, new int[]{0x03, 0x13, 0x23, 0x33, 0x43, 0x53, 0x63, 0x73,
@@ -229,16 +229,16 @@ public class CPU extends WindowWithTitle {
             new OpcodeType(this::ROL, new OpcodeDef[] {
                     new OpcodeDef(null,         2, new int[]{0x2a}, null),
                     new OpcodeDef(this::address_zp,   5, new int[]{0x26}, null),
-                    new OpcodeDef(this::address_zpX,  5, new int[]{0x36}, null),
-                    new OpcodeDef(this::address_abs,  5, new int[]{0x2e}, null),
-                    new OpcodeDef(this::address_absX, 5, new int[]{0x3e}, null),
+                    new OpcodeDef(this::address_zpX,  6, new int[]{0x36}, null),
+                    new OpcodeDef(this::address_abs,  6, new int[]{0x2e}, null),
+                    new OpcodeDef(this::address_absX, 6, new int[]{0x3e}, null),
             }),
             new OpcodeType(this::ROR, new OpcodeDef[] {
                     new OpcodeDef(null,         2, new int[]{0x6a}, null),
                     new OpcodeDef(this::address_zp,   5, new int[]{0x66}, null),
-                    new OpcodeDef(this::address_zpX,  5, new int[]{0x76}, null),
-                    new OpcodeDef(this::address_abs,  5, new int[]{0x6e}, null),
-                    new OpcodeDef(this::address_absX, 5, new int[]{0x7e}, null),
+                    new OpcodeDef(this::address_zpX,  6, new int[]{0x76}, null),
+                    new OpcodeDef(this::address_abs,  6, new int[]{0x6e}, null),
+                    new OpcodeDef(this::address_absX, 6, new int[]{0x7e}, null),
             }),
             new OpcodeType(this::RTI, new OpcodeDef[] {
                     new OpcodeDef(null, 6, new int[]{0x40}, null),
@@ -259,13 +259,13 @@ public class CPU extends WindowWithTitle {
                     new OpcodeDef(this::value_zpInd, 5, new int[]{0xf2}, null),
             }),
             new OpcodeType(this::STA, new OpcodeDef[] {
-                    new OpcodeDef(this::address_zp,   3, new int[]{0x85}, null),
-                    new OpcodeDef(this::address_zpX,  4, new int[]{0x95}, null),
-                    new OpcodeDef(this::address_abs,  4, new int[]{0x8d}, null),
-                    new OpcodeDef(this::address_absX, 4, new int[]{0x9d}, null),
-                    new OpcodeDef(this::address_absY, 4, new int[]{0x99}, null),
-                    new OpcodeDef(this::address_xInd, 6, new int[]{0x81}, null),
-                    new OpcodeDef(this::address_indY, 5, new int[]{0x91}, null),
+                    new OpcodeDef(this::address_zp,         3, new int[]{0x85}, null),
+                    new OpcodeDef(this::address_zpX,        4, new int[]{0x95}, null),
+                    new OpcodeDef(this::address_abs,        4, new int[]{0x8d}, null),
+                    new OpcodeDef(this::address_absX_fixed, 5, new int[]{0x9d}, null),
+                    new OpcodeDef(this::address_absY_fixed, 5, new int[]{0x99}, null),
+                    new OpcodeDef(this::address_xInd,       6, new int[]{0x81}, null),
+                    new OpcodeDef(this::address_indY_fixed, 6, new int[]{0x91}, null),
 
                     new OpcodeDef(this::address_zpInd, 5, new int[]{0x92}, null),
             }),
@@ -302,7 +302,7 @@ public class CPU extends WindowWithTitle {
                     new OpcodeDef(this::value_zp, 5, new int[]{0xff}, "7"),
             }),
             new OpcodeType(this::BRA, new OpcodeDef[] {
-                    new OpcodeDef(null, 3, new int[]{0x80}, null),
+                    new OpcodeDef(null, 2, new int[]{0x80}, null),
             }),
             new OpcodeType(this::RMB_, new OpcodeDef[] {
                     new OpcodeDef(this::address_zp, 5, new int[]{0x07}, "0"),
@@ -329,17 +329,17 @@ public class CPU extends WindowWithTitle {
             }),
             new OpcodeType(this::STZ, new OpcodeDef[]{
                     new OpcodeDef(this::address_zp,   2, new int[]{0x64}, null),
-                    new OpcodeDef(this::address_zpX,  2, new int[]{0x74}, null),
-                    new OpcodeDef(this::address_abs,  3, new int[]{0x9c}, null),
-                    new OpcodeDef(this::address_absX, 3, new int[]{0x9e}, null),
+                    new OpcodeDef(this::address_zpX,  4, new int[]{0x74}, null),
+                    new OpcodeDef(this::address_abs,  4, new int[]{0x9c}, null),
+                    new OpcodeDef(this::address_absX, 4, new int[]{0x9e}, null),
             }),
             new OpcodeType(this::TRB, new OpcodeDef[]{
-                    new OpcodeDef(this::address_zp,   6, new int[]{0x1c}, null),
-                    new OpcodeDef(this::address_abs,  5, new int[]{0x14}, null),
+                    new OpcodeDef(this::address_zp,   5, new int[]{0x14}, null),
+                    new OpcodeDef(this::address_abs,  6, new int[]{0x1c}, null),
             }),
             new OpcodeType(this::TSB, new OpcodeDef[]{
-                    new OpcodeDef(this::address_zp,   6, new int[]{0x0c}, null),
-                    new OpcodeDef(this::address_abs,  5, new int[]{0x04}, null),
+                    new OpcodeDef(this::address_zp,   5, new int[]{0x04}, null),
+                    new OpcodeDef(this::address_abs,  6, new int[]{0x0c}, null),
             }),
             new OpcodeType(this::WAI, new OpcodeDef[] {
                     new OpcodeDef(null, 3, new int[]{0xcb}, null),
@@ -399,17 +399,21 @@ public class CPU extends WindowWithTitle {
     }
 
     public void clock() {
-        if (cycles > 0) {
-            cycles--;
-        } else if (cycles == 0) {
+        if (cycles <= 0) {
             CMU.step = false;
 
             if (!stop) {
+                boolean irq = !CMU.pollIRQ();
+                //           ^^^ IRQs are active-low
+                if (irq) {
+                    wait = false;
+                }
+
                 if (CMU.pollNMI()) {
                     // NMIs have priority
+                    wait = false;
                     hardwareInterrupt(1);
-                } else if (!CMU.pollIRQ() & (!getFlag('I'))) {
-                    //    ^^^ IRQs are active-low
+                } else if (irq & (!getFlag('I'))) {
                     hardwareInterrupt(2);
                 } else if (!wait) {
                     int opcode = nextByte();
@@ -419,9 +423,11 @@ public class CPU extends WindowWithTitle {
                 }
             }
         }
+        if (cycles > 0) {
+            cycles--;
+        }
     }
     private void hardwareInterrupt(int i) {
-        wait = false;
         cycles = 7;
         stackPushWord(PC);
         stackPush(P | 0b0010_0000);  // bit 5 gets pushed as 1 by IRQs and NMIs
@@ -533,6 +539,9 @@ public class CPU extends WindowWithTitle {
         }
         return a & 0xffff;
     }
+    private int indexedAddress_fixed(int address, int i) {
+        return (address + i) & 0xffff;
+    }
 
     private int address_zp() {
         return nextByte();
@@ -548,7 +557,7 @@ public class CPU extends WindowWithTitle {
     }
     private int address_zpInd() {
         int a = nextByte();
-        return read(a) | (read(a + 1) << 8);
+        return read(a) | (read((a + 1) & 0xff) << 8);
     }
     private int address_abs() {
         return nextWord();
@@ -559,8 +568,14 @@ public class CPU extends WindowWithTitle {
     private int address_absX() {
         return indexedAddress(nextWord(), X);
     }
+    private int address_absX_fixed() {
+        return indexedAddress_fixed(nextWord(), X);
+    }
     private int address_absY() {
         return indexedAddress(nextWord(), Y);
+    }
+    private int address_absY_fixed() {
+        return indexedAddress_fixed(nextWord(), Y);
     }
     private int address_ind() {
         int i = nextWord();
@@ -569,11 +584,15 @@ public class CPU extends WindowWithTitle {
     }
     private int address_xInd() {
         int a = (nextByte() + X) & 0xff;
-        return (read(a) | (read(a + 1) << 8));
+        return (read(a) | (read((a + 1) & 0xff) << 8));
     }
     private int address_indY() {
         int a = nextByte();
         return indexedAddress(read(a) | (read((a + 1) & 0xff) << 8), Y);
+    }
+    private int address_indY_fixed() {
+        int a = nextByte();
+        return indexedAddress_fixed(read(a) | (read((a + 1) & 0xff) << 8), Y);
     }
     private int address_absXInd() {
         int a = (nextWord() + X) & 0xffff;
@@ -677,8 +696,11 @@ public class CPU extends WindowWithTitle {
     }
     private void BIT(OpcodeContext c) {
         writeFlag('Z', (c.input & A)    == 0);
-        writeFlag('N', (c.input & 0x80) != 0);
-        writeFlag('V', (c.input & 0x40) != 0);
+        if (c.args == null) {
+            // non-immediate variants only
+            writeFlag('N', (c.input & 0x80) != 0);
+            writeFlag('V', (c.input & 0x40) != 0);
+        }
     }
     private void BRK(OpcodeContext c) {
         nextByte();  // BRK dummy read
@@ -686,7 +708,9 @@ public class CPU extends WindowWithTitle {
         stackPushWord(PC);
         stackPush(P | 0b0011_0000);  // bit 5 and the B flag both get pushed as 1 by BRK
 
-        setFlag('I');  // BRKs set the interrupt disable flag
+        // BRKs on the 65c02 set the interrupt disable flag and clear the decimal flag
+        setFlag('I');
+        clearFlag('D');
 
         PC = vectorAddress(2);
     }
