@@ -11,7 +11,9 @@ import org.kittykat.cat65.core.CMU;
  * >:c
 **/
 public class ACIA extends ExtraChip {
-    private char crlfQueue = '\0';
+    private volatile boolean charAvailable = false;
+    private volatile char    crlfQueue     = '\0';
+    private volatile char    nextChar      = '\0';
 
     private int status = 0b0001_0000;
     private int cmd    = 0b0000_0000;
@@ -23,22 +25,27 @@ public class ACIA extends ExtraChip {
     }
 
     public void receiveChar(char chr, boolean secondCRLF) {
+        // emulator CRLF queue
+        if ((nextChar != '\r') && (nextChar != '\n')) {
+            crlfQueue = '\0';
+        }
+        if (secondCRLF) {
+            crlfQueue = chr;
+        } else {
+            nextChar = chr;
+        }
+        charAvailable = true;
+    }
+
+    private void handleReceivedChar() {
         // check if DTR is 1 and the Receiver Clock Source uses the baud rate
         // the external Rx Clock is disconnected so if RCS is 0, the Rx Clock is basically 0 Hz
         if (((cmd & 0b0000_0001) != 0) && ((ctrl &0b0001_0000) != 0)) {
-            // emulator CRLF queue
-            if ((chr != '\r') && (chr != '\n')) {
-                crlfQueue = '\0';
-            }
-            if (secondCRLF) {
-                crlfQueue = chr;
-            } else {
-                updateRDR(chr);
-            }
+            updateRDR(nextChar);
 
             // receiver echo mode
             if ((cmd & 0b0001_1100) == 0b0001_0000) {
-                CMU.terminalPrint(chr);
+                CMU.terminalPrint(nextChar);
             }
             update(true);
         }
@@ -72,6 +79,13 @@ public class ACIA extends ExtraChip {
         status |= 0b0000_1000;  // RDR full
     }
 
+    @Override
+    public void clock() {
+        if (charAvailable) {
+            handleReceivedChar();
+            charAvailable = false;
+        }
+    }
     @Override
     public void reset() {
         status &= 0b0110_0000;

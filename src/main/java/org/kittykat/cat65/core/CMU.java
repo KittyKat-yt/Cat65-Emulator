@@ -230,6 +230,7 @@ public abstract class CMU {
 
     public static void clock() {
         via.clock();
+        acia.clock();
         exPort04.clock();
         exPort07.clock();
         clockAudio();
