@@ -654,24 +654,23 @@ public class CPU extends WindowWithTitle {
     }
 
     private void ADC(OpcodeContext c) {
-        int carry = (getFlag('C') ? 1 : 0);
+        int carry = EmuHelper.boolBit(getFlag('C'));
         int v1 = A;
-        int r;
+        int b = v1 + c.input + carry;
         if (getFlag('D')) {  // decimal mode
             int d1 = EmuHelper.fromBCD(v1);
             int d2 = EmuHelper.fromBCD(c.input);
-            r = d1 + d2 + carry;
+            int r = d1 + d2 + carry;
             A = EmuHelper.toBCD(r % 100);
             writeFlag('C', r > 99);
             
             cycles++;  // on the 65c02 BCD math takes an extra cycle
         } else {
-            r = v1 + c.input + carry;
-            A = r & 0xff;
-            writeFlag('C', r > 0xff);
+            A = b & 0xff;
+            writeFlag('C', b > 0xff);
         }
         flagsZN(A);
-        writeFlag('V', (~(v1 ^ c.input) & (v1 ^ r) & 0x80) != 0);
+        writeFlag('V', (~(v1 ^ c.input) & (v1 ^ b) & 0x80) != 0);
     }
     private void AND(OpcodeContext c) {
         A &= c.input;
@@ -900,23 +899,22 @@ public class CPU extends WindowWithTitle {
         PC = (stackPullWord() + 1) & 0xffff;
     }
     private void SBC(OpcodeContext c) {
-        int carry = (getFlag('C') ? 0 : 1);
+        int carry = EmuHelper.boolBit(!getFlag('C'));
         int v1 = A;
-        int r;
+        int b = v1 - c.input - carry;
         if (getFlag('D')) {  // decimal mode
             int d1 = EmuHelper.fromBCD(v1);
             int d2 = EmuHelper.fromBCD(c.input);
-            r = d1 - d2 - carry;
+            int r = d1 - d2 - carry;
             A = EmuHelper.toBCD((100 + r) % 100);
 
             cycles++;  // on the 65c02 BCD math takes an extra cycle
         } else {
-            r = v1 - c.input - carry;
-            A = r & 0xff;
+            A = b & 0xff;
         }
-        writeFlag('C', r >= 0x00);
+        writeFlag('C', b >= 0x00);
         flagsZN(A);
-        writeFlag('V', ((v1 ^ c.input) & (v1 ^ r) & 0x80) != 0);
+        writeFlag('V', ((v1 ^ c.input) & (v1 ^ b) & 0x80) != 0);
     }
     private void STA(OpcodeContext c) {
         write(c.input, A);
