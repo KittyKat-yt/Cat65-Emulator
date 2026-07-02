@@ -13,10 +13,8 @@ import javafx.util.StringConverter;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.URISyntaxException;
+import java.io.InputStream;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 public abstract class EmuHelper {
     public static final URL CSS = loadResource("style.css");
@@ -24,12 +22,13 @@ public abstract class EmuHelper {
     public static URL loadResource(String path) {
         return EmuHelper.class.getResource("%s%s".formatted(Cat65.RESOURCE_PATH, path));
     }
-    public static byte[] readResourceFile(String path) throws IOException, URISyntaxException {
-        URL resource = loadResource(path);
-        if (resource == null) {
-            throw new FileNotFoundException("\"%s%s\" does not exist!".formatted(Cat65.RESOURCE_PATH, path));
+    public static byte[] readResourceFile(String path) throws IOException {
+        try (InputStream in = EmuHelper.class.getResourceAsStream(Cat65.RESOURCE_PATH + path)) {
+            if (in == null) {
+                throw new FileNotFoundException("\"%s%s\" does not exist!".formatted(Cat65.RESOURCE_PATH, path));
+            }
+            return in.readAllBytes();
         }
-        return Files.readAllBytes(Path.of(resource.toURI()));
     }
 
     public static String getBinary(int value, boolean is16bit) {
