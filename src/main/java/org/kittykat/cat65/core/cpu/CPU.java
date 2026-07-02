@@ -8,7 +8,9 @@ import org.kittykat.cat65.EmuHelper;
 import org.kittykat.cat65.core.CMU;
 import org.kittykat.cat65.ui.window.WindowWithTitle;
 
-@SuppressWarnings("unused")
+import static org.kittykat.cat65.core.CMU.read;
+import static org.kittykat.cat65.core.CMU.write;
+
 public class CPU extends WindowWithTitle {
     private final OpcodeType[] opcodeTypes = {
             new OpcodeType(this::ADC, new OpcodeDef[] {
@@ -90,6 +92,8 @@ public class CPU extends WindowWithTitle {
                     new OpcodeDef(this::address_zpX,  6, new int[]{0xd6}, null),
                     new OpcodeDef(this::address_abs,  6, new int[]{0xce}, null),
                     new OpcodeDef(this::address_absX, 7, new int[]{0xde}, null),
+
+                    new OpcodeDef(null, 2, new int[]{0x3a}, null),
             }),
             new OpcodeType(this::DEX, new OpcodeDef[] {
                     new OpcodeDef(null, 2, new int[]{0xca}, null),
@@ -125,6 +129,8 @@ public class CPU extends WindowWithTitle {
                     new OpcodeDef(this::address_zpX,  6, new int[]{0xf6}, null),
                     new OpcodeDef(this::address_abs,  6, new int[]{0xee}, null),
                     new OpcodeDef(this::address_absX, 7, new int[]{0xfe}, null),
+
+                    new OpcodeDef(null, 2, new int[]{0x1a}, null),
             }),
             new OpcodeType(this::INX, new OpcodeDef[] {
                     new OpcodeDef(null, 2, new int[]{0xe8}, null),
@@ -275,7 +281,7 @@ public class CPU extends WindowWithTitle {
             }),
 
             // 65c02 exclusive instructions
-            new OpcodeType(this::BBR, new OpcodeDef[] {
+            new OpcodeType(this::BBR_, new OpcodeDef[] {
                     new OpcodeDef(this::value_zp, 5, new int[]{0x0f}, "0"),
                     new OpcodeDef(this::value_zp, 5, new int[]{0x1f}, "1"),
                     new OpcodeDef(this::value_zp, 5, new int[]{0x2f}, "2"),
@@ -285,7 +291,7 @@ public class CPU extends WindowWithTitle {
                     new OpcodeDef(this::value_zp, 5, new int[]{0x6f}, "6"),
                     new OpcodeDef(this::value_zp, 5, new int[]{0x7f}, "7"),
             }),
-            new OpcodeType(this::BBS, new OpcodeDef[] {
+            new OpcodeType(this::BBS_, new OpcodeDef[] {
                     new OpcodeDef(this::value_zp, 5, new int[]{0x8f}, "0"),
                     new OpcodeDef(this::value_zp, 5, new int[]{0x9f}, "1"),
                     new OpcodeDef(this::value_zp, 5, new int[]{0xaf}, "2"),
@@ -298,13 +304,7 @@ public class CPU extends WindowWithTitle {
             new OpcodeType(this::BRA, new OpcodeDef[] {
                     new OpcodeDef(null, 3, new int[]{0x80}, null),
             }),
-            new OpcodeType(this::DEA, new OpcodeDef[] {
-                    new OpcodeDef(null, 2, new int[]{0x3a}, null),
-            }),
-            new OpcodeType(this::INA, new OpcodeDef[] {
-                    new OpcodeDef(null, 2, new int[]{0x1a}, null),
-            }),
-            new OpcodeType(this::RMB, new OpcodeDef[] {
+            new OpcodeType(this::RMB_, new OpcodeDef[] {
                     new OpcodeDef(this::address_zp, 5, new int[]{0x07}, "0"),
                     new OpcodeDef(this::address_zp, 5, new int[]{0x17}, "1"),
                     new OpcodeDef(this::address_zp, 5, new int[]{0x27}, "2"),
@@ -314,7 +314,7 @@ public class CPU extends WindowWithTitle {
                     new OpcodeDef(this::address_zp, 5, new int[]{0x67}, "6"),
                     new OpcodeDef(this::address_zp, 5, new int[]{0x77}, "7"),
             }),
-            new OpcodeType(this::SMB, new OpcodeDef[] {
+            new OpcodeType(this::SMB_, new OpcodeDef[] {
                     new OpcodeDef(this::address_zp, 5, new int[]{0x87}, "0"),
                     new OpcodeDef(this::address_zp, 5, new int[]{0x97}, "1"),
                     new OpcodeDef(this::address_zp, 5, new int[]{0xa7}, "2"),
@@ -364,7 +364,7 @@ public class CPU extends WindowWithTitle {
     private int     cycles = 0;
     private boolean wait   = false;
     private boolean stop   = false;
-    private boolean jam    = false;
+    private boolean jam    = false;  // left over from the original 6502 emulator
 
     private static final String[] STATUS_NAMES = {"A", "X", "Y", "S", "P", "PC", "MDR"};
     private final VBox statusText;
@@ -383,12 +383,11 @@ public class CPU extends WindowWithTitle {
 
         makeOpcodes();
     }
-
     private void makeOpcodes() {
-        for (OpcodeType opT : opcodeTypes) {
-            for (OpcodeDef opD : opT.opcodeDefinitions()) {
-                Opcode opcode = new Opcode(opT.method(), opD.input(), opD.args(), opD.cycles());
-                for (int b : opD.opcodes()) {
+        for (OpcodeType type : opcodeTypes) {
+            for (OpcodeDef def : type.opcodeDefinitions()) {
+                Opcode opcode = new Opcode(type.method(), def.input(), def.args(), def.cycles());
+                for (int b : def.opcodes()) {
                     if (opcodes[b] != null) throw new OpcodeException(b, opcodes[b], opcode);
                     opcodes[b] = opcode;
                 }
@@ -406,21 +405,17 @@ public class CPU extends WindowWithTitle {
             CMU.step = false;
 
             if (!stop) {
-                if (jam) {
-                    CMU.read(0xffff);
-                } else {
-                    if (CMU.pollNMI()) {
-                        // NMIs have priority
-                        hardwareInterrupt(1);
-                    } else if (!CMU.pollIRQ() & (!getFlag('I'))) {
-                        //    ^^^ IRQs are active-low
-                        hardwareInterrupt(2);
-                    } else if (!wait) {
-                        int opcode = nextByte();
-                        Opcode op = opcodes[opcode];
-                        cycles = op.cycles;
-                        op.execute();
-                    }
+                if (CMU.pollNMI()) {
+                    // NMIs have priority
+                    hardwareInterrupt(1);
+                } else if (!CMU.pollIRQ() & (!getFlag('I'))) {
+                    //    ^^^ IRQs are active-low
+                    hardwareInterrupt(2);
+                } else if (!wait) {
+                    int opcode = nextByte();
+                    Opcode op = opcodes[opcode];
+                    cycles = op.cycles;
+                    op.execute();
                 }
             }
         }
@@ -430,29 +425,33 @@ public class CPU extends WindowWithTitle {
         cycles = 7;
         stackPushWord(PC);
         stackPush(P | 0b0010_0000);  // bit 5 gets pushed as 1 by IRQs and NMIs
+
+        // IRQs and NMIs on the 65c02 set the interrupt disable flag and clear the decimal flag
         setFlag('I');
         clearFlag('D');
+
         PC = vectorAddress(i);
     }
     public void reset() {
         wait = false;
         stop = false;
-        jam = false;
+        jam  = false;
         cycles = 7;
 
-        // left over BRK read (would read the opcode)
-        nextByte();
-        // dummy read left over from BRK
-        nextByte();
+        nextByte();  // left over BRK read (would read the opcode)
+        nextByte();  // dummy read left over from BRK
+
         // suppressed stack writes (converted to reads)
-        CMU.read(0x0100 | S);
+        read(0x0100 | S);
         S = (S - 1) & 0xff;
-        CMU.read(0x0100 | S);
+        read(0x0100 | S);
         S = (S - 1) & 0xff;
-        CMU.read(0x0100 | S);
+        read(0x0100 | S);
         S = (S - 1) & 0xff;
+
         // Status Flags get reset too
         P = (P & 0b1100_0011) | 0b0000_0100;
+
         // read $fffc and $fffd to get the PC
         PC = vectorAddress(0);
     }
@@ -497,7 +496,7 @@ public class CPU extends WindowWithTitle {
     }
 
     private void stackPush(int v) {
-        CMU.write(0x0100 | S, v);
+        write(0x0100 | S, v);
         S = (S - 1) & 0xff;
     }
     private void stackPushWord(int v) {
@@ -506,16 +505,15 @@ public class CPU extends WindowWithTitle {
     }
     private int stackPull() {
         S = (S + 1) & 0xff;
-        return CMU.read(0x0100 | S);
+        return read(0x0100 | S);
     }
     private int stackPullWord() {
         return stackPull() | (stackPull() << 8);
     }
 
     private int nextByte() {
-        int v = CMU.read(PC);
-        PC++;
-        PC &= 0xffff;
+        int v = read(PC);
+        PC = (PC + 1) & 0xffff;
         return v;
     }
     private int nextWord() {
@@ -524,8 +522,8 @@ public class CPU extends WindowWithTitle {
         return ((high << 8) | low);
     }
     private int vectorAddress(int i) {
-        int low  = CMU.read(INTERRUPT_ADDRESSES[i]);
-        int high = CMU.read(INTERRUPT_ADDRESSES[i] + 1);
+        int low  = read(INTERRUPT_ADDRESSES[i]);
+        int high = read(INTERRUPT_ADDRESSES[i] + 1);
         return ((high << 8) | low);
     }
     private int indexedAddress(int address, int i) {
@@ -550,7 +548,7 @@ public class CPU extends WindowWithTitle {
     }
     private int address_zpInd() {
         int a = nextByte();
-        return CMU.read(a) | (CMU.read(a + 1) << 8);
+        return read(a) | (read(a + 1) << 8);
     }
     private int address_abs() {
         return nextWord();
@@ -567,56 +565,56 @@ public class CPU extends WindowWithTitle {
     private int address_ind() {
         int i = nextWord();
         int j = (i + 1) & 0xffff;
-        return (CMU.read(i) | (CMU.read(j) << 8));
+        return (read(i) | (read(j) << 8));
     }
     private int address_xInd() {
         int a = (nextByte() + X) & 0xff;
-        return (CMU.read(a) | (CMU.read(a + 1) << 8));
+        return (read(a) | (read(a + 1) << 8));
     }
     private int address_indY() {
         int a = nextByte();
-        return indexedAddress(CMU.read(a) | (CMU.read((a + 1) & 0xff) << 8), Y);
+        return indexedAddress(read(a) | (read((a + 1) & 0xff) << 8), Y);
     }
     private int address_absXInd() {
         int a = (nextWord() + X) & 0xffff;
-        return CMU.read(a) | (CMU.read((a + 1) & 0xffff) << 8);
+        return read(a) | (read((a + 1) & 0xffff) << 8);
     }
 
     private int value_imm() {
         return nextByte();
     }
     private int value_zp() {
-        return CMU.read(address_zp());
+        return read(address_zp());
     }
     private int value_zpX() {
-        return CMU.read(address_zpXY(X));
+        return read(address_zpXY(X));
     }
     private int value_zpY() {
-        return CMU.read(address_zpXY(Y));
+        return read(address_zpXY(Y));
     }
     private int value_zpInd() {
-        return CMU.read(address_zpInd());
+        return read(address_zpInd());
     }
     private int value_abs() {
-        return CMU.read(address_abs());
+        return read(address_abs());
     }
     private int value_absX() {
-        return CMU.read(address_absXY(X));
+        return read(address_absXY(X));
     }
     private int value_absY() {
-        return CMU.read(address_absXY(Y));
+        return read(address_absXY(Y));
     }
     private int value_ind() {
-        return CMU.read(address_ind());
+        return read(address_ind());
     }
     private int value_xInd() {
-        return CMU.read(address_xInd());
+        return read(address_xInd());
     }
     private int value_indY() {
-        return CMU.read(address_indY());
+        return read(address_indY());
     }
     private int value_absXInd() {
-        return CMU.read(address_absXInd());
+        return read(address_absXInd());
     }
 
     private boolean bitBranchValue(int v, OpcodeContext c) {
@@ -624,10 +622,9 @@ public class CPU extends WindowWithTitle {
     }
     private void branch(int offsetByte) {
         cycles++;
-        int o = PC;
-        PC += EmuHelper.fromTwosComp(offsetByte);
-        PC &= 0xffff;
-        if ((PC & 0xff00) != (o & 0xff00)) {
+        int original = PC;
+        PC = (PC + EmuHelper.fromTwosComp(offsetByte)) & 0xffff;
+        if ((PC & 0xff00) != (original & 0xff00)) {  // check if page-boundary is crossed
             cycles++;
         }
     }
@@ -647,13 +644,15 @@ public class CPU extends WindowWithTitle {
             r = d1 + d2 + carry;
             A = EmuHelper.toBCD(r % 100);
             writeFlag('C', r > 99);
+            
+            cycles++;  // on the 65c02 BCD math takes an extra cycle
         } else {
             r = v1 + c.input + carry;
             A = r & 0xff;
             writeFlag('C', r > 0xff);
         }
         flagsZN(A);
-        writeFlag('V', ((~(v1 ^ c.input)) & (v1 ^ r) & 0x80) != 0);
+        writeFlag('V', (~(v1 ^ c.input) & (v1 ^ r) & 0x80) != 0);
     }
     private void AND(OpcodeContext c) {
         A &= c.input;
@@ -662,8 +661,8 @@ public class CPU extends WindowWithTitle {
     private void ASL(OpcodeContext c) {
         int v;
         if (c.hasInput) {
-            v = CMU.read(c.input) << 1;
-            CMU.write(c.input, v);
+            v = read(c.input) << 1;
+            write(c.input, v);
         } else {
             v = A << 1;
             A = v & 0xff;
@@ -672,10 +671,9 @@ public class CPU extends WindowWithTitle {
         flagsZN(v & 0xff);
     }
     private void B__(OpcodeContext c) {
+        // branch instructions
         int d = value_imm();
-        if (getFlag(c.args.charAt(0)) == (c.args.charAt(1) == 'S')) {
-            branch(d);
-        }
+        if (getFlag(c.args.charAt(0)) == (c.args.charAt(1) == 'S')) branch(d);
     }
     private void BIT(OpcodeContext c) {
         writeFlag('Z', (c.input & A)    == 0);
@@ -683,10 +681,13 @@ public class CPU extends WindowWithTitle {
         writeFlag('V', (c.input & 0x40) != 0);
     }
     private void BRK(OpcodeContext c) {
-        nextByte();
+        nextByte();  // BRK dummy read
+
         stackPushWord(PC);
         stackPush(P | 0b0011_0000);  // bit 5 and the B flag both get pushed as 1 by BRK
-        setFlag('I');
+
+        setFlag('I');  // BRKs set the interrupt disable flag
+
         PC = vectorAddress(2);
     }
     private void CMP(OpcodeContext c) {
@@ -699,8 +700,13 @@ public class CPU extends WindowWithTitle {
         compare(Y, c.input);
     }
     private void DEC(OpcodeContext c) {
-        int v = (CMU.read(c.input) - 1) & 0xff;
-        CMU.write(c.input, v);
+        int v;
+        if (c.hasInput) {
+            v = (read(c.input) - 1) & 0xff;
+            write(c.input, v);
+        } else {
+            A = v = (A - 1) & 0xff;
+        }
         flagsZN(v);
     }
     private void DEX(OpcodeContext c) {
@@ -716,14 +722,21 @@ public class CPU extends WindowWithTitle {
         flagsZN(A);
     }
     private void SE_(OpcodeContext c) {
+        // set flag instructions
         setFlag(c.args.charAt(0));
     }
     private void CL_(OpcodeContext c) {
+        // clear flag instructions
         clearFlag(c.args.charAt(0));
     }
     private void INC(OpcodeContext c) {
-        int v = (CMU.read(c.input) + 1) & 0xff;
-        CMU.write(c.input, v);
+        int v;
+        if (c.hasInput) {
+            v = (read(c.input) + 1) & 0xff;
+            write(c.input, v);
+        } else {
+            A = v = (A + 1) & 0xff;
+        }
         flagsZN(v);
     }
     private void INX(OpcodeContext c) {
@@ -738,7 +751,7 @@ public class CPU extends WindowWithTitle {
         PC = c.input;
     }
     private void JSR(OpcodeContext c) {
-        stackPushWord(PC - 1);
+        stackPushWord((PC - 1) & 0xffff);
         PC = c.input;
     }
     private void LDA(OpcodeContext c) {
@@ -756,10 +769,10 @@ public class CPU extends WindowWithTitle {
     private void LSR(OpcodeContext c) {
         int v;
         if (c.hasInput) {
-            v = CMU.read(c.input);
+            v = read(c.input);
             writeFlag('C', (v & 0x01) != 0);
             v >>= 1;
-            CMU.write(c.input, v);
+            write(c.input, v);
         } else {
             writeFlag('C', (A & 0x01) != 0);
             A >>= 1;
@@ -776,6 +789,7 @@ public class CPU extends WindowWithTitle {
         flagsZN(A);
     }
     private void PH_(OpcodeContext c) {
+        // stack push instructions
         char r = c.args.charAt(0);
         switch (r) {
             case 'A' -> stackPush(A);
@@ -785,6 +799,7 @@ public class CPU extends WindowWithTitle {
         }
     }
     private void PL_(OpcodeContext c) {
+        // stack pull instructions
         char r = c.args.charAt(0);
         switch (r) {
             case 'A' -> {
@@ -803,7 +818,7 @@ public class CPU extends WindowWithTitle {
         }
     }
     private void T__(OpcodeContext c) {
-        // register Transfers
+        // register transfer instructions
         char s = c.args.charAt(0);
         char d = c.args.charAt(1);
         int v = switch (s) {
@@ -828,9 +843,9 @@ public class CPU extends WindowWithTitle {
         int o;
         int v;
         if (c.hasInput) {
-            o = CMU.read(c.input);
+            o = read(c.input);
             v = ((o << 1) | carry) & 0xff;
-            CMU.write(c.input, v);
+            write(c.input, v);
         } else {
             o = A;
             A = v = ((o << 1) | carry) & 0xff;
@@ -843,9 +858,9 @@ public class CPU extends WindowWithTitle {
         int o;
         int v;
         if (c.hasInput) {
-            o = CMU.read(c.input);
+            o = read(c.input);
             v = ((o >> 1) | carry) & 0xff;
-            CMU.write(c.input, v);
+            write(c.input, v);
         } else {
             o = A;
             A = v = ((o >> 1) | carry) & 0xff;
@@ -869,6 +884,8 @@ public class CPU extends WindowWithTitle {
             int d2 = EmuHelper.fromBCD(c.input);
             r = d1 - d2 - carry;
             A = EmuHelper.toBCD((100 + r) % 100);
+
+            cycles++;  // on the 65c02 BCD math takes an extra cycle
         } else {
             r = v1 - c.input - carry;
             A = r & 0xff;
@@ -878,64 +895,56 @@ public class CPU extends WindowWithTitle {
         writeFlag('V', ((v1 ^ c.input) & (v1 ^ r) & 0x80) != 0);
     }
     private void STA(OpcodeContext c) {
-        CMU.write(c.input, A);
+        write(c.input, A);
     }
     private void STX(OpcodeContext c) {
-        CMU.write(c.input, X);
+        write(c.input, X);
     }
     private void STY(OpcodeContext c) {
-        CMU.write(c.input, Y);
+        write(c.input, Y);
     }
 
     // WDC 65c02 exclusive instructions
-    private void BBR(OpcodeContext c) {
+    private void BBR_(OpcodeContext c) {
+        // branch-on-bit-reset instructions
         int d = nextByte();
-        if (!bitBranchValue(c.input, c)) {
-            branch(d);
-        }
+        if (!bitBranchValue(c.input, c)) branch(d);
     }
-    private void BBS(OpcodeContext c) {
+    private void BBS_(OpcodeContext c) {
+        // branch-on-bit-set instructions
         int d = nextByte();
-        if (bitBranchValue(c.input, c)) {
-            branch(d);
-        }
+        if (bitBranchValue(c.input, c)) branch(d);
     }
     private void BRA(OpcodeContext c) {
         branch(value_imm());
     }
-    private void DEA(OpcodeContext c) {
-        A = (A - 1) & 0xff;
-        flagsZN(A);
-    }
-    private void INA(OpcodeContext c) {
-        A = (A + 1) & 0xff;
-        flagsZN(A);
-    }
-    private void RMB(OpcodeContext c) {
-        int v = CMU.read(c.input);
+    private void RMB_(OpcodeContext c) {
+        // reset-memory-bit instructions
+        int v = read(c.input);
         v &= ~bitMask(c.args.charAt(0) - '0');
-        CMU.write(c.input, v);
+        write(c.input, v);
     }
-    private void SMB(OpcodeContext c) {
-        int v = CMU.read(c.input);
+    private void SMB_(OpcodeContext c) {
+        // set-memory-bit instructions
+        int v = read(c.input);
         v |= bitMask(c.args.charAt(0) - '0');
-        CMU.write(c.input, v);
+        write(c.input, v);
     }
     private void STP(OpcodeContext c) {
         stop = true;
     }
     private void STZ(OpcodeContext c) {
-        CMU.write(c.input, 0x00);
+        write(c.input, 0x00);
     }
     private void TRB(OpcodeContext c) {
-        int v = CMU.read(c.input);
+        int v = read(c.input);
         writeFlag('Z', (A & v) == 0);
-        CMU.write(c.input, ~A & v);
+        write(c.input, ~A & v);
     }
     private void TSB(OpcodeContext c) {
-        int v = CMU.read(c.input);
+        int v = read(c.input);
         writeFlag('Z', (A & v) == 0);
-        CMU.write(c.input, A | v);
+        write(c.input, A | v);
     }
     private void WAI(OpcodeContext c) {
         wait = true;
@@ -967,12 +976,12 @@ public class CPU extends WindowWithTitle {
     }
     private void DCP(OpcodeContext c) {  // (DCM)
         DEC(c);
-        c.input = CMU.read(c.input);
+        c.input = read(c.input);
         CMP(c);
     }
     private void ISC(OpcodeContext c) {  // (ISB, INS)
         DEC(c);
-        c.input = CMU.read(c.input);
+        c.input = read(c.input);
         SBC(c);
     }
     private void LAS(OpcodeContext c) {  // (LAR, LAE)
@@ -990,17 +999,17 @@ public class CPU extends WindowWithTitle {
     }
     private void RLA(OpcodeContext c) {
         ROL(c);
-        c.input = CMU.read(c.input);
+        c.input = read(c.input);
         AND(c);
     }
     private void RRA(OpcodeContext c) {
         ROR(c);
-        c.input = CMU.read(c.input);
+        c.input = read(c.input);
         AND(c);
     }
     private void SAX(OpcodeContext c) {  // (AXS, AAX)
         int r = A & X;
-        CMU.write(c.input, r);
+        write(c.input, r);
     }
     private void SBX(OpcodeContext c) {  // (AXS, SAX)
         int o = A & X;
@@ -1019,7 +1028,7 @@ public class CPU extends WindowWithTitle {
             a = (high << 8) | low + Y;
         }
         int v = A & X & (high + 1);
-        CMU.write(a, v);
+        write(a, v);
     }
     private void SHX(OpcodeContext c) {  // (SXA, XAS)
         int o = (c.input - Y) & 0xffff;
@@ -1032,7 +1041,7 @@ public class CPU extends WindowWithTitle {
             a = (high << 8) | low + Y;
         }
         int v = X & (high + 1);
-        CMU.write(a, v);
+        write(a, v);
         // see SHA
     }
     private void SHY(OpcodeContext c) {  // (SYA, SAY)
@@ -1046,17 +1055,17 @@ public class CPU extends WindowWithTitle {
             a = (high << 8) | low + X;
         }
         int v = Y & (high + 1);
-        CMU.write(a, v);
+        write(a, v);
         // see SHA
     }
     private void SLO(OpcodeContext c) {  // (ASO)
         ASL(c);
-        c.input = CMU.read(c.input);
+        c.input = read(c.input);
         ORA(c);
     }
     private void SRE(OpcodeContext c) {  // (LSE)
         LSR(c);
-        c.input = CMU.read(c.input);
+        c.input = read(c.input);
         EOR(c);
     }
     private void TAS(OpcodeContext c) {  // (XAS, SHS)
@@ -1072,7 +1081,7 @@ public class CPU extends WindowWithTitle {
             a = (high << 8) | low + Y;
         }
         int v = S & (high + 1);
-        CMU.write(a, v);
+        write(a, v);
     }
     private void JAM(OpcodeContext c) {  // (KIL, HLT)
         jam = true;
