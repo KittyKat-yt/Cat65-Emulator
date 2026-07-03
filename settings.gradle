@@ -1,1 +1,7 @@
+plugins {
+    // Auto-downloads a matching JDK when the Java 21 toolchain required by
+    // build.gradle is not installed locally.
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
 rootProject.name = 'Cat65'
