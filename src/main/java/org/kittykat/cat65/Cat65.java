@@ -7,8 +7,6 @@ import javafx.stage.Stage;
 import org.kittykat.cat65.core.CMU;
 import org.kittykat.cat65.core.ExpansionData;
 
-import java.util.Locale;
-
 public class Cat65 extends Application {
     public static final String RESOURCE_PATH = "/org/kittykat/cat65/";
 
@@ -38,10 +36,5 @@ public class Cat65 extends Application {
         mainStage.setOnCloseRequest(event -> stop());
         mainStage.show();
         CMU.startThreads();
-    }
-
-    public static void main(String[] args) {
-        Locale.setDefault(Locale.ENGLISH);
-        launch(args);
     }
 }
