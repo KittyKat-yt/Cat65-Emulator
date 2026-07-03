@@ -18,7 +18,7 @@ repositories {
 }
 
 application {
-    mainClass = 'org.kittykat.cat65.Cat65'
+    mainClass = 'org.kittykat.cat65.Launcher'
 }
 
 javafx {
