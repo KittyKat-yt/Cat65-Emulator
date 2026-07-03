@@ -1,0 +1,12 @@
+# Line endings: the Gradle wrapper scripts only work with the right EOLs,
+# regardless of core.autocrlf on the machine that checks them out.
+gradlew         text eol=lf
+*.sh            text eol=lf
+*.bat           text eol=crlf
+
+# Never let git touch binary artifacts.
+*.jar           binary
+*.rom           binary
+*.png           binary
+*.bin           binary
+*.c65           binary

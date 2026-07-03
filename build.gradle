@@ -26,22 +26,10 @@ javafx {
     modules = ['javafx.controls', 'javafx.graphics']
 }
 
-def osName = System.getProperty('os.name').toLowerCase()
-def platform = ''
-if (osName.contains('win')) {
-    platform = 'win'
-} else if (osName.contains('mac')) {
-    platform = 'mac'
-} else if (osName.contains('linux')) {
-    platform = 'linux'
-}
-
+// JavaFX platform artifacts (win/mac/mac-aarch64/linux/...) are resolved by
+// the org.openjfx.javafxplugin from the javafx {} block above — no manual
+// os.name sniffing needed.
 dependencies {
-    def javafxModules = ['base', 'controls', 'graphics']
-    javafxModules.each { module ->
-        implementation "org.openjfx:javafx-$module:${javafx.version}:$platform"
-        implementation "org.openjfx:javafx-$module:${javafx.version}:sources"
-    }
     /*
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
@@ -49,8 +37,19 @@ dependencies {
      */
 }
 
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
 /*
 test {
     useJUnitPlatform()
 }
  */
+
+// Keep `./gradlew wrapper` regenerations reproducible and checksum-verified.
+wrapper {
+    gradleVersion = '8.14'
+    distributionType = Wrapper.DistributionType.BIN
+    distributionSha256Sum = '61ad310d3c7d3e5da131b76bbf22b5a4c0786e9d892dae8c1658d4b484de3caa'
+}
