@@ -18,7 +18,7 @@ public enum ExpansionPort {
         }
     };
 
-    public static ExpansionPort fromID(int id) {
+    public static ExpansionPort fromID(byte id) {
         return switch (id) {
             case 0x2 -> _2A05;
             case 0x7 -> _Vgc7;

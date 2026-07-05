@@ -38,10 +38,12 @@ public abstract class ExpansionData {
     public static int loadC65(byte[] file, int index) {
         if (index < file.length) {
             System.out.println("[*] loading tilesets...");
+
             int max = file.length - index;
-            int tilesetCount = file[0x6];
+            int tilesetCount = file[0x6] & 0xff;
+
             if (tilesetCount > MAX_TILESETS) {
-                System.err.printf("[!] The maximum tileset count should be %d\n", MAX_TILESETS);
+                System.err.printf("[!] The maximum tileset count allowed is %d, got %d\n", MAX_TILESETS, tilesetCount);
                 tilesetCount = MAX_TILESETS;
             }
             int tilesetSize = tilesetCount * TILESET_SIZE;
@@ -49,6 +51,7 @@ public abstract class ExpansionData {
                 System.err.printf("[!] Cannot load %d bytes when only %d are available!\n", tilesetSize, max);
                 tilesetSize = max;
             }
+
             for (int t = 0; t < tilesetSize; t++) {
                 tilesetROM[t] = file[index++];
             }

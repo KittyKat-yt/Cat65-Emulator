@@ -364,41 +364,47 @@ public abstract class CMU {
 
     @SuppressWarnings("CallToPrintStackTrace")
     public static void loadROM(File file) {
+        boolean p = paused;
+        paused = true;
         try {
-            byte[] data = Files.readAllBytes(file.toPath());
             System.out.println();
-            if (data.length < 0x8000) {
-                System.err.printf("[!] Warning! %s has a file size below 32KB!\n", file);
-            } else if (data.length >= 0x8010) {
-                // load in c65 format
+            byte[] data = Files.readAllBytes(file.toPath());
+
+            boolean c65 = true;
+            for (int i = 0; i < 4; i++) {
+                if (data[i] != ID_CHARS[i]) {
+                    c65 = false;
+                    break;
+                }
+            }
+            if (c65) {
                 loadC65(data);
-                return;
+            } else {
+                loadRaw(data);
             }
-            System.out.println("[#] loading ROM");
-            for (int i = 0; i < rom.length; i++) {
-                rom[i] = (i < data.length) ? data[i] : 0x00;
-            }
+
             reset = true;
+            paused = p;
         } catch (Exception e) {
             System.err.println("[!] Could not open file...");
             e.printStackTrace();
         }
     }
+    private static void loadRaw(byte[] file) {
+        System.out.println("[#] loading ROM");
+        if (file.length < 0x8000) {
+            System.err.println("[!] Warning! this ROM has a file size below 32KiB!");
+        } else if (file.length > 0x8000) {
+            System.err.println("[!] Warning! this ROM has more than 32KiB!");
+        }
+
+        for (int i = 0; i < rom.length; i++) {
+            rom[i] = (i < file.length) ? file[i] : 0x00;
+        }
+    }
     private static void loadC65(byte[] file) {
         System.out.println("[#] loading .c65 file");
         // 0x7 to 0xf are reserved for future use
-
-        boolean valid = true;
-        for (int i = 0; i < 4; i++) {
-            if (file[i] != ID_CHARS[i]) {
-                valid = false;
-                break;
-            }
-        }
-        if (!valid) {
-            System.err.println("[!] This file seems broken...");
-            return;
-        }
 
         System.out.println("[*] loading Expansion...");
         config.exPort04.set(ExpansionPort.fromID(file[0x4]));
