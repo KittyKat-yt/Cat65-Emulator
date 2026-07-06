@@ -58,17 +58,6 @@ public class ACIA extends ExtraChip {
                 updateRDR(crlfQueue);
                 crlfQueue = '\0';
             }
-
-            boolean enabled = ((cmd & 0b0000_0001) != 0);  // if IRQs can be asserted at all
-            // determine if RDRF or TDRE can assert IRQs
-            boolean rdrf = ((status & 0b0000_1000) != 0) && ((cmd & 0b0000_0010) == 0);
-            boolean tdre = ((status & 0b0001_0000) != 0) && ((cmd & 0b0000_1100) == 0b0000_0100);
-            // set IRQ flag
-            if (enabled && (rdrf || tdre)) {
-                status |= 0b1000_0000;
-            } else {
-                status &= 0b0111_1111;
-            }
         }
     }
     private void updateRDR(char chr) {
@@ -77,6 +66,16 @@ public class ACIA extends ExtraChip {
             status |= 0b0000_0100;  // overrun
         }
         status |= 0b0000_1000;  // RDR full
+        checkIRQ((cmd & 0b0000_0010) == 0);  // if RDRF can assert IRQs
+    }
+
+    private boolean areInterruptsEnabled() {
+        return ((cmd & 0b0000_0001) != 0);
+    }
+    private void checkIRQ(boolean condition) {
+        if (areInterruptsEnabled() && condition) {
+            status |= 0b1000_0000;
+        }
     }
 
     @Override
@@ -102,15 +101,15 @@ public class ACIA extends ExtraChip {
     protected int get(int relAddress, boolean cpu) {
         int value = switch (relAddress) {
             case 0b00 -> receiveData;
-            case 0b01 -> status;
+            case 0b01 -> status | 0b0001_0000;  // stuck TDRE bit
             case 0b10 -> cmd;
             case 0b11 -> ctrl;
             default   -> CMU.getMDR();
         };
         if (cpu) {
-            if (relAddress == 0b00) {
-                // clear certain status register bits on RDR read
-                status &= 0b1111_0000;
+            switch (relAddress) {
+                case 0b00 -> status &= 0b1111_0000;  // clear certain status register bits on RDR read
+                case 0b01 -> status &= 0b0111_1111;  // clear interrupt flag on status read
             }
         }
         update(cpu);
