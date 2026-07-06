@@ -14,8 +14,10 @@ import org.kittykat.cat65.core.expansionDevices.audio.AudioExpansion;
 import org.kittykat.cat65.core.extraChips.ACIA;
 import org.kittykat.cat65.core.extraChips.LCD;
 import org.kittykat.cat65.core.extraChips.VIA;
+import org.kittykat.cat65.ui.window.CPUWindow;
 import org.kittykat.cat65.ui.window.DebugWindow;
 import org.kittykat.cat65.ui.window.HexView;
+import org.kittykat.cat65.ui.window.LCDWindow;
 import org.kittykat.cat65.ui.window.SerialTerminal;
 import org.kittykat.cat65.ui.window.ConfigWindow;
 import org.kittykat.cat65.settings.ExpansionPort;
@@ -43,7 +45,8 @@ public abstract class CMU {
     private static final int HEADER_SIZE = 16;
     private static final char[] ID_CHARS = {'c', '6', '5', 0x15};
 
-    private static final DebugWindow debugWindow = new DebugWindow();
+    // all UI windows are created in makeWindow() so the core stays usable headless (e.g. in unit tests)
+    private static DebugWindow debugWindow;
 
     private static volatile int  debug_bufferFillSum   = 0;
     private static volatile int  debug_bufferFillCount = 0;
@@ -58,8 +61,8 @@ public abstract class CMU {
     private static double sampleTimeAccumulator = 0L;
     private static float  filteredSample = 0f;
 
-    private static final ConfigWindow   config = new ConfigWindow();
-    private static final SerialTerminal terminal = new SerialTerminal();
+    private static ConfigWindow   config;
+    private static SerialTerminal terminal;
 
     private static final int ROM_SIZE = 0x8000;
     private static final byte[] rom = new byte[ROM_SIZE];
@@ -70,8 +73,28 @@ public abstract class CMU {
     private static final ACIA acia = new ACIA();
     private static final VIA  via  = new VIA();
     private static final LCD  lcd  = new LCD();
-    private static final CPU  cpu  = new CPU();
-    private static final HexView hexView = new HexView();
+    private static final CPU  cpu  = new CPU(new Bus() {
+        @Override
+        public int read(int address) {
+            return CMU.read(address);
+        }
+        @Override
+        public void write(int address, int value) {
+            CMU.write(address, value);
+        }
+        @Override
+        public boolean pollIRQ() {
+            return CMU.pollIRQ();
+        }
+        @Override
+        public boolean pollNMI() {
+            return CMU.pollNMI();
+        }
+    });
+
+    private static CPUWindow cpuWindow;
+    private static LCDWindow lcdWindow;
+    private static HexView   hexView;
 
     private static long timeSinceLastClock = System.nanoTime();
 
@@ -86,11 +109,18 @@ public abstract class CMU {
     private static boolean showDebug = false;
 
     public static GridPane makeWindow() {
+        debugWindow = new DebugWindow();
+        config      = new ConfigWindow();
+        terminal    = new SerialTerminal();
+        cpuWindow   = new CPUWindow(cpu);
+        lcdWindow   = new LCDWindow(lcd);
+        hexView     = new HexView();
+
         GridPane window = EmuHelper.makeFreeGrid(WINDOW_ROWS, WINDOW_COLS, HPos.CENTER);
-        window.add(config,  0, 0, 7, 1);
-        window.add(lcd,       7, 0, 6, 1);
-        window.add(cpu,      13, 0, 7, 1);
-        window.add(hexView,  13, 1, 7, 3);
+        window.add(config,     0, 0, 7, 1);
+        window.add(lcdWindow,  7, 0, 6, 1);
+        window.add(cpuWindow, 13, 0, 7, 1);
+        window.add(hexView,   13, 1, 7, 3);
         addBigNode(window, terminal);
         addBigNode(window, debugWindow);
         debugWindow.setVisible(false);
@@ -104,10 +134,11 @@ public abstract class CMU {
         terminal.clear();
     }
     public static void terminalPrint(char c) {
-        terminal.print(c);
+        if (terminal != null) terminal.print(c);
     }
     public static boolean isSerialInputEmpty() {
-        return terminal.isBufferEmpty();
+        // no terminal means no serial input (headless use)
+        return (terminal == null) || terminal.isBufferEmpty();
     }
     public static char pollSerialInput() {
         return terminal.pollChar();
@@ -222,12 +253,12 @@ public abstract class CMU {
                 if (!running) stop();
 
                 lastUpdate = now;
-                cpu.updateWindow();
+                cpuWindow.updateWindow();
                 hexView.updateWindow();
                 exPort04.updateWindow();
                 exPort07.updateWindow();
                 terminal.updateWindow();
-                lcd.updateWindow();
+                lcdWindow.updateWindow();
                 debugWindow.updateWindow();
             }
         };
@@ -240,6 +271,7 @@ public abstract class CMU {
         exPort04.clock();
         exPort07.clock();
         clockAudio();
+        if (cpu.isAtInstructionBoundary()) step = false;
         cpu.clock();
     }
     private static void clockAudio() {

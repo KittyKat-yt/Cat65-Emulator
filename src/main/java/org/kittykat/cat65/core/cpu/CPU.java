@@ -1,17 +1,9 @@
 package org.kittykat.cat65.core.cpu;
 
-import javafx.scene.Node;
-import javafx.scene.control.Label;
-import javafx.scene.layout.VBox;
-import org.kittykat.cat65.Cat65;
 import org.kittykat.cat65.EmuHelper;
-import org.kittykat.cat65.core.CMU;
-import org.kittykat.cat65.ui.window.WindowWithTitle;
+import org.kittykat.cat65.core.Bus;
 
-import static org.kittykat.cat65.core.CMU.read;
-import static org.kittykat.cat65.core.CMU.write;
-
-public class CPU extends WindowWithTitle {
+public class CPU {
     private final OpcodeType[] opcodeTypes = {
             new OpcodeType(this::ADC, new OpcodeDef[] {
                     new OpcodeDef(this::value_imm,  2, new int[]{0x69}, null),
@@ -368,21 +360,10 @@ public class CPU extends WindowWithTitle {
     private boolean stop   = false;
     private boolean jam    = false;  // left over from the original 6502 emulator
 
-    private static final String[] STATUS_NAMES = {"A", "X", "Y", "S", "P", "PC", "MDR"};
-    private final VBox statusText;
+    private final Bus bus;
 
-    public CPU() {
-        super("CPU Status");
-
-        statusText = new VBox(Cat65.SPACING);
-        for (String statusName : STATUS_NAMES) {
-            Label lbl_reg = new Label();
-            lbl_reg.setId("reg-%s".formatted(statusName));
-            lbl_reg.getStyleClass().add("CPU-reg");
-            statusText.getChildren().add(lbl_reg);
-        }
-        getChildren().add(statusText);
-
+    public CPU(Bus bus) {
+        this.bus = bus;
         makeOpcodes();
     }
     private void makeOpcodes() {
@@ -402,16 +383,14 @@ public class CPU extends WindowWithTitle {
 
     public void clock() {
         if (cycles <= 0) {
-            CMU.step = false;
-
             if (!stop) {
-                boolean irq = !CMU.pollIRQ();
+                boolean irq = !bus.pollIRQ();
                 //           ^^^ IRQs are active-low
                 if (irq) {
                     wait = false;
                 }
 
-                if (CMU.pollNMI()) {
+                if (bus.pollNMI()) {
                     // NMIs have priority
                     wait = false;
                     hardwareInterrupt(1);
@@ -501,6 +480,13 @@ public class CPU extends WindowWithTitle {
 
     private int bitMask(int i) {
         return 1 << i;
+    }
+
+    private int read(int address) {
+        return bus.read(address);
+    }
+    private void write(int address, int value) {
+        bus.write(address, value);
     }
 
     private void stackPush(int v) {
@@ -1150,30 +1136,36 @@ public class CPU extends WindowWithTitle {
         jam = true;
     }
 
-    @Override
-    public void updateWindow() {
-        for (Node node : statusText.getChildren()) {
-            if (node instanceof Label label) {
-                String regName = label.getId().substring(4);
-                int value = switch (regName) {
-                    case "A"   -> A;
-                    case "X"   -> X;
-                    case "Y"   -> Y;
-                    case "S"   -> S;
-                    case "P"   -> P;
-                    case "PC"  -> PC;
-                    case "MDR" -> CMU.getMDR();
-                    default        -> 0x00;
-                };
-                if (regName.equals("PC")) {
-                    label.setText("%3s:  %5d  |  %04x  |  %s  |  \"%s\"".formatted(regName, value, value,
-                            EmuHelper.getBinary(value, true), EmuHelper.getAsciiString(value, true)));
-                } else {
+    /**
+     * {@code true} when the current instruction has finished and the next
+     * {@link #clock()} will fetch a new one (or service a pending interrupt).
+    **/
+    public boolean isAtInstructionBoundary() {
+        return cycles <= 0;
+    }
+    public boolean isWaiting() {
+        return wait;
+    }
+    public boolean isStopped() {
+        return stop;
+    }
 
-                    label.setText("%3s:  %5d  |    %02x  |          %s  |   \"%s\"".formatted(regName, value, value,
-                            EmuHelper.getBinary(value, false), EmuHelper.getAsciiString(value, false)));
-                }
-            }
-        }
+    public int getA() {
+        return A;
+    }
+    public int getX() {
+        return X;
+    }
+    public int getY() {
+        return Y;
+    }
+    public int getS() {
+        return S;
+    }
+    public int getP() {
+        return P;
+    }
+    public int getPC() {
+        return PC;
     }
 }
