@@ -106,8 +106,11 @@ public abstract class CMU {
     public static void terminalPrint(char c) {
         terminal.print(c);
     }
-    public static void receiveChar(char c, boolean secondCRLF) {
-        acia.receiveChar(c, secondCRLF);
+    public static boolean isSerialInputEmpty() {
+        return terminal.isBufferEmpty();
+    }
+    public static char pollSerialInput() {
+        return terminal.pollChar();
     }
 
     public static ObjectProperty<NewLineVariant> getNewLineVariant() {

@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class SerialTerminal extends WindowWithTitle {
     private final TextArea terminal = new TextArea();
+    private final ConcurrentLinkedQueue<Character> inputQueue = new ConcurrentLinkedQueue<>();
     private final ConcurrentLinkedQueue<Character> printQueue = new ConcurrentLinkedQueue<>();
 
     public SerialTerminal() {
@@ -21,22 +22,37 @@ public class SerialTerminal extends WindowWithTitle {
         terminal.setEditable(false);
         terminal.setWrapText(true);
         terminal.addEventFilter(KeyEvent.KEY_TYPED, e -> {
-            char chr = e.getCharacter().charAt(0);
-            if (chr == 0x0d) {
-                CMU.receiveChar(switch (CMU.getNewLineVariant().get()) {
-                    case CR, CRLF -> '\r';
-                    case LF       -> '\n';
-                }, false);
-                if (CMU.getNewLineVariant().get() == NewLineVariant.CRLF) {
-                    CMU.receiveChar('\n', true);
-                }
-            } else {
-                CMU.receiveChar(chr, false);
+            for (char chr : e.getCharacter().toCharArray()) {
+                handleTypedChar(chr);
             }
             e.consume();
         });
         VBox.setVgrow(terminal, Priority.ALWAYS);
         getChildren().add(terminal);
+    }
+    private void handleTypedChar(char c) {
+        if (c == 0x0d) {
+            bufferChar(switch (CMU.getNewLineVariant().get()) {
+                case CR, CRLF -> '\r';
+                case LF       -> '\n';
+            });
+            if (CMU.getNewLineVariant().get() == NewLineVariant.CRLF) {
+                bufferChar('\n');
+            }
+        } else {
+            bufferChar(c);
+        }
+    }
+    private void bufferChar(char c) {
+        inputQueue.add(c);
+    }
+
+    public boolean isBufferEmpty() {
+        return inputQueue.isEmpty();
+    }
+    @SuppressWarnings("DataFlowIssue")
+    public char pollChar() {
+        return inputQueue.poll();
     }
 
     public void print(char chr) {
