@@ -88,10 +88,11 @@ public class CPU extends WindowWithTitle {
                     new OpcodeDef(this::value_abs, 4, new int[]{0xcc}, null),
             }),
             new OpcodeType(this::DEC, new OpcodeDef[] {
-                    new OpcodeDef(this::address_zp,   5, new int[]{0xc6}, null),
-                    new OpcodeDef(this::address_zpX,  6, new int[]{0xd6}, null),
-                    new OpcodeDef(this::address_abs,  6, new int[]{0xce}, null),
-                    new OpcodeDef(this::address_absX, 6, new int[]{0xde}, null),
+                    new OpcodeDef(this::address_zp,         5, new int[]{0xc6}, null),
+                    new OpcodeDef(this::address_zpX,        6, new int[]{0xd6}, null),
+                    new OpcodeDef(this::address_abs,        6, new int[]{0xce}, null),
+                    new OpcodeDef(this::address_absX_fixed, 7, new int[]{0xde}, null),
+                    // for some reason DEC abs,x isn't like the other RMW instructions and has a fixed cycle count
 
                     new OpcodeDef(null, 2, new int[]{0x3a}, null),
             }),
@@ -125,10 +126,11 @@ public class CPU extends WindowWithTitle {
                     new OpcodeDef(null, 2, new int[]{0xd8}, "D"),  // CLD
             }),
             new OpcodeType(this::INC, new OpcodeDef[] {
-                    new OpcodeDef(this::address_zp,   5, new int[]{0xe6}, null),
-                    new OpcodeDef(this::address_zpX,  6, new int[]{0xf6}, null),
-                    new OpcodeDef(this::address_abs,  6, new int[]{0xee}, null),
-                    new OpcodeDef(this::address_absX, 6, new int[]{0xfe}, null),
+                    new OpcodeDef(this::address_zp,         5, new int[]{0xe6}, null),
+                    new OpcodeDef(this::address_zpX,        6, new int[]{0xf6}, null),
+                    new OpcodeDef(this::address_abs,        6, new int[]{0xee}, null),
+                    new OpcodeDef(this::address_absX_fixed, 7, new int[]{0xfe}, null),
+                    // for some reason INC abs,x isn't like the other RMW instructions and has a fixed cycle count
 
                     new OpcodeDef(null, 2, new int[]{0x1a}, null),
             }),
@@ -184,8 +186,8 @@ public class CPU extends WindowWithTitle {
                     new OpcodeDef(null,     1, new int[]{0x03, 0x13, 0x23, 0x33, 0x43, 0x53, 0x63, 0x73,
                                                                         0x83, 0x93, 0xa3, 0xb3, 0xc3, 0xd3, 0xe3, 0xf3,
                                                                         0x0b, 0x1b, 0x2b, 0x3b, 0x4b, 0x5b, 0x6b, 0x7b,
-                                                                        0x8b, 0x9b, 0xab, 0xbb, 0xeb, 0xfb}, null),
-                    new OpcodeDef(null,     2, new int[]{0xea}, null),
+                                                                        0x8b, 0x9b, 0xab, 0xbb, 0xeb, 0xfb}, "-"),
+                    new OpcodeDef(null,     2, new int[]{0xea}, "-"),
                     new OpcodeDef(this::nextByte, 2, new int[]{0x02, 0x22, 0x42, 0x62, 0x82, 0xc2, 0xe2}, null),
                     new OpcodeDef(this::nextByte, 3, new int[]{0x44}, null),
                     new OpcodeDef(this::nextByte, 4, new int[]{0x54, 0xd4, 0xf4}, null),
@@ -328,10 +330,10 @@ public class CPU extends WindowWithTitle {
                     new OpcodeDef(null, 3, new int[]{0xdb}, null),
             }),
             new OpcodeType(this::STZ, new OpcodeDef[]{
-                    new OpcodeDef(this::address_zp,   2, new int[]{0x64}, null),
-                    new OpcodeDef(this::address_zpX,  4, new int[]{0x74}, null),
-                    new OpcodeDef(this::address_abs,  4, new int[]{0x9c}, null),
-                    new OpcodeDef(this::address_absX, 4, new int[]{0x9e}, null),
+                    new OpcodeDef(this::address_zp,         3, new int[]{0x64}, null),
+                    new OpcodeDef(this::address_zpX,        4, new int[]{0x74}, null),
+                    new OpcodeDef(this::address_abs,        4, new int[]{0x9c}, null),
+                    new OpcodeDef(this::address_absX_fixed, 5, new int[]{0x9e}, null),
             }),
             new OpcodeType(this::TRB, new OpcodeDef[]{
                     new OpcodeDef(this::address_zp,   5, new int[]{0x14}, null),
@@ -539,7 +541,7 @@ public class CPU extends WindowWithTitle {
         int a = address + i;
         if ((address & 0xff00) != (a & 0xff00)) {  // check if a page-boundary is crossed
             // it first reads the byte at the address with the correct low-byte but incorrect high-byte before fixing the high-byte
-            read((a & 0xff00) | (PC & 0x00ff));
+            read((address & 0xff00) | (a & 0x00ff));
             if (!fixedCycles) cycles++;
         }
         return a & 0xffff;
@@ -666,7 +668,7 @@ public class CPU extends WindowWithTitle {
             int d1 = EmuHelper.fromBCD(v1);
             int d2 = EmuHelper.fromBCD(c.input);
             int r = d1 + d2 + carry;
-            A = EmuHelper.toBCD(r % 100);
+            A = EmuHelper.toBCD(r % 100) & 0xff;
             writeFlag('C', r > 99);
             
             cycles++;  // on the 65c02 BCD math takes an extra cycle
@@ -819,7 +821,9 @@ public class CPU extends WindowWithTitle {
         flagsZN(v);
     }
     private void NOP(OpcodeContext c) {
-        dummyRead();  // dummy read (implied instruction)
+        if (c.args != null) {
+            dummyRead();  // dummy read (implied instruction)
+        }
 
         // wow :3c
         // such empty >w<
@@ -941,7 +945,7 @@ public class CPU extends WindowWithTitle {
             int d1 = EmuHelper.fromBCD(v1);
             int d2 = EmuHelper.fromBCD(c.input);
             int r = d1 - d2 - carry;
-            A = EmuHelper.toBCD((100 + r) % 100);
+            A = EmuHelper.toBCD(Math.floorMod(100 + r, 100)) & 0xff;
 
             cycles++;  // on the 65c02 BCD math takes an extra cycle
         } else {
