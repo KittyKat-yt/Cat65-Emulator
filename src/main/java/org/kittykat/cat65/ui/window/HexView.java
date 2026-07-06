@@ -11,6 +11,9 @@ import javafx.scene.layout.VBox;
 import org.kittykat.cat65.EmuHelper;
 import org.kittykat.cat65.core.CMU;
 
+import java.util.Locale;
+import java.util.logging.Logger;
+
 public class HexView extends WindowWithTitle {
     private final ObservableList<String> lines = FXCollections.observableArrayList();
     private final ListView<String> hexView;
@@ -18,18 +21,18 @@ public class HexView extends WindowWithTitle {
     private static final double MAX_FONT_SIZE      = 12d;
     private static final double FONT_SIZE_CONSTANT = MAX_FONT_SIZE / 560d;
 
+    /*
+     * this basically just filters out an annoying warning message
+     * the thing it's warning about fixes itself, but it still fills the error log
+     * (claude wrote this code, but it works, so I'm keeping it)
+     */
+    private static final Logger CONTROLS_LOGGER = Logger.getLogger("javafx.scene.control");
+    static {
+        CONTROLS_LOGGER.setFilter(record -> (record.getMessage() == null) || !record.getMessage().contains("index exceeds maxCellCount"));
+    }
+
     public HexView() {
         super("Hex Viewer [CPU Memory]");
-
-        /*
-         * I tried to get this weird warning/error that shows up to go away
-         * idk what even causes it tbh
-         * for now I'll just leave it cuz it's not a major issue
-         *
-         * INFO: index exceeds maxCellCount. Check size calculations for class javafx.scene.control.skin.ListViewSkin$2
-         *
-         * this is why I hate front-end/UI code
-         */
 
         hexView = new ListView<>(lines);
         hexView.setCache(true);
@@ -47,7 +50,7 @@ public class HexView extends WindowWithTitle {
 
     private void updateFontSize(double width) {
         double newSize = Math.min(MAX_FONT_SIZE, width * FONT_SIZE_CONSTANT);
-        hexView.setStyle("-fx-font-size: %.3f;".formatted(newSize));
+        hexView.setStyle(String.format(Locale.ROOT, "-fx-font-size: %.3f;", newSize));
     }
 
     public String getVisualizerLine(int lineNum) {
