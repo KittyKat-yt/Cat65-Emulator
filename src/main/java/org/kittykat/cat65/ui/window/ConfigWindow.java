@@ -4,9 +4,11 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.HPos;
 import javafx.scene.control.*;
+import javafx.scene.control.SpinnerValueFactory.IntegerSpinnerValueFactory;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
+import javafx.util.StringConverter;
 import org.kittykat.cat65.EmuHelper;
 import org.kittykat.cat65.core.CMU;
 import org.kittykat.cat65.settings.ExpansionPort;
@@ -28,22 +30,16 @@ public class ConfigWindow extends Window {
     // 1MHz -> 1µs = 1_000ns
     public volatile long clockPeriodNanos = 1_000L;  // 1MHz
 
-    @SuppressWarnings("NonAtomicOperationOnVolatileField")
     public ConfigWindow() {
         super();
+        GridPane controls = initControls();
+        GridPane settings = initSettings();
+        getChildren().addAll(controls, new Separator(), settings);
+    }
 
-        romChooser.setInitialDirectory(new File(System.getProperty("user.home")));
-        romChooser.setTitle("Open ROM :3c");
-        romChooser.getExtensionFilters().addAll(
-                new ExtensionFilter("ROMs", "*.c65", "*.rom", "*.bin"),
-                new ExtensionFilter("all files", "*")
-        );
-        Button btn_load = makeButton("Load ROM", event -> {
-            File file = romChooser.showOpenDialog(getScene().getWindow());
-            if (file != null) {
-                CMU.loadROM(file);
-            }
-        });
+    @SuppressWarnings("NonAtomicOperationOnVolatileField")
+    private GridPane initControls() {
+        Button btn_load            = initRomChooser();
         Button btn_reset           = makeButton("Reset", event -> CMU.reset = true);
         Button btn_instructionStep = makeButton("Step",  event -> CMU.step  = true);
 
@@ -64,10 +60,34 @@ public class ConfigWindow extends Window {
         controls.addRow(1, btn_reset, btn_pause, btn_instructionStep);
         controls.add(btn_clearTerminal, 3, 0, 2, 1);
         controls.add(btn_showDebug,     3, 1, 2, 1);
+        return controls;
+    }
+    private Button initRomChooser() {
+        romChooser.setInitialDirectory(new File(System.getProperty("user.home")));
+        romChooser.setTitle("Open ROM :3c");
+        romChooser.getExtensionFilters().addAll(
+                new ExtensionFilter("ROMs", "*.c65", "*.rom", "*.bin"),
+                new ExtensionFilter("all files", "*")
+        );
+        return makeButton("Load ROM", event -> {
+            File file = romChooser.showOpenDialog(getScene().getWindow());
+            if (file != null) {
+                CMU.loadROM(file);
+            }
+        });
+    }
 
+    private GridPane initSettings() {
         Label lbl_newLineSetting = new Label("New Line Variant:");
         ComboBox<NewLineVariant> setting_newLine    = makeSetting(newLineVariant, NewLineVariant.class, NewLineVariant.stringConverter);
 
+        GridPane settings = EmuHelper.makeGrid(4, 3, HPos.LEFT);
+        settings.addRow(0, lbl_newLineSetting, setting_newLine);
+        initExpansionConfig(settings);
+        initClockSpinner(settings);
+        return settings;
+    }
+    private void initExpansionConfig(GridPane settings) {
         Button btn_openPort04 = makeButton("Open Window ($4)", event -> CMU.openEx04Window());
         Button btn_openPort07 = makeButton("Open Window ($7)", event -> CMU.openEx07Window());
         btn_openPort04.setDisable(true);
@@ -85,18 +105,36 @@ public class ConfigWindow extends Window {
             btn_openPort07.setDisable(CMU.doesEx07HaveNoWindow());
         });
 
-        Label lbl_clockPeriod             = new Label("Clock Period [ns]:");
-        Spinner<Integer> clockPeriodInput = new Spinner<>(850, 100_000_000, 1_000, 1);
-        clockPeriodInput.setEditable(true);
-        clockPeriodInput.valueProperty().addListener((obs, oldVal, newVal) -> clockPeriodNanos = newVal);
-
-        GridPane settings = EmuHelper.makeGrid(4, 3, HPos.LEFT);
-        settings.addRow(0, lbl_newLineSetting, setting_newLine);
         settings.addRow(1, lbl_expansionPorts, setting_expansion4, setting_expansion7);
         settings.add(btn_openPort04, 1, 2);
         settings.add(btn_openPort07, 2, 2);
-        settings.addRow(3, lbl_clockPeriod,    clockPeriodInput);
+    }
+    private void initClockSpinner(GridPane settings) {
+        Label lbl_clockPeriod             = new Label("Clock Period [ns]:");
+        Spinner<Integer> clockPeriodInput = new Spinner<>(850, 100_000_000, 1_000, 1);
+        clockPeriodInput.setEditable(true);
 
-        getChildren().addAll(controls, new Separator(), settings);
+        IntegerSpinnerValueFactory factory = (IntegerSpinnerValueFactory) clockPeriodInput.getValueFactory();
+        StringConverter<Integer> def = factory.getConverter();
+        factory.setConverter(new StringConverter<>() {
+            @Override public String toString(Integer v) {
+                return def.toString(v);
+            }
+            @Override public Integer fromString(String s) {
+                try {
+                    return def.fromString(s);
+                } catch (NumberFormatException e) {
+                    clockPeriodInput.cancelEdit();
+                    return factory.getValue();
+                }
+            }
+        });
+
+        clockPeriodInput.valueProperty().addListener((obs, oldVal, newVal) -> clockPeriodNanos = newVal);
+        clockPeriodInput.focusedProperty().addListener((obs, was, is) -> {
+            if (!is) clockPeriodInput.commitValue();
+        });
+
+        settings.addRow(3, lbl_clockPeriod,    clockPeriodInput);
     }
 }
