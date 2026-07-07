@@ -1,17 +1,8 @@
 package org.kittykat.cat65.core.extraChips;
 
-import org.kittykat.cat65.ui.window.Window;
-
-public class LCD extends Window {
+public class LCD {
     public LCD() {
-        super();
-        // ToDo: load LCD sprite
         // ToDo: init CHR-RAM
-    }
-
-    @Override
-    public void updateWindow() {
-        // ToDo: update visuals
     }
 
     /**

@@ -35,6 +35,9 @@ public class Cat65 extends Application {
         mainStage.setMaximized(true);
         mainStage.setOnCloseRequest(event -> stop());
         mainStage.show();
-        CMU.startThreads();
+
+        CMU.startClockThread();
+        CMU.startAudioThread();
+        CMU.startUiThread();
     }
 }
