@@ -340,7 +340,7 @@ public class CPU {
     };
     private final Opcode[] opcodes = new Opcode[0x100];
 
-    private static final int[] INTERRUPT_ADDRESSES = {
+    public static final int[] VECTOR_ADDRESSES = {
             0xfffc,  // Reset
             0xfffa,  // NMI
             0xfffe,  // IRQ/BRK
@@ -518,8 +518,8 @@ public class CPU {
         return ((high << 8) | low);
     }
     private int vectorAddress(int i) {
-        int low  = read(INTERRUPT_ADDRESSES[i]);
-        int high = read(INTERRUPT_ADDRESSES[i] + 1);
+        int low  = read(VECTOR_ADDRESSES[i]);
+        int high = read(VECTOR_ADDRESSES[i] + 1);
         return ((high << 8) | low);
     }
     private int indexedAddress(int address, int i, boolean fixedCycles) {
@@ -1156,11 +1156,5 @@ public class CPU {
 
     public boolean isAtInstructionBoundary() {
         return cycles <= 0;
-    }
-    public boolean isWaiting() {
-        return wait;
-    }
-    public boolean isStopped() {
-        return stop;
     }
 }
