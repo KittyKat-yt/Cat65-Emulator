@@ -5,7 +5,6 @@ import java.util.function.IntSupplier;
 
 class Opcode {
     public final Consumer<OpcodeContext> method;
-    private final boolean hasInput;
     private final IntSupplier input;
     private final String args;
     public final int cycles;
@@ -15,15 +14,11 @@ class Opcode {
         this.input = input;
         this.args = args;
         this.cycles = cycles;
-        hasInput = (input != null);
     }
 
     public void execute() {
-        int i = 0;
-        if (hasInput) {
-            i = input.getAsInt();
-        }
-        OpcodeContext c = new OpcodeContext(hasInput, i, args);
+        int i = input.getAsInt();
+        OpcodeContext c = new OpcodeContext(i, args);
         method.accept(c);
     }
 
