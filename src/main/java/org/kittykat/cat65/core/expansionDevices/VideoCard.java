@@ -258,7 +258,7 @@ public class VideoCard extends ExpansionDevice {
 
     @Override
     public boolean getNMI() {
-        return !(((ctrl & 0b1000_0000) != 0) && vBlank);
+        return ((ctrl & 0b1000_0000) != 0) && vBlank;
     }
 
     @Override
