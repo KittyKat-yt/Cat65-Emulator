@@ -396,7 +396,7 @@ public abstract class CMU {
             case 0x6             -> via.write(address - 0x6000, value, cpu);
             case 0x7             -> exPort07.write(address - 0x7000, value, cpu);
             default -> {
-                 if (!cpu) rom[address - 0x8000] = (byte) value;
+                 // ROM is read-only; do nothing on write attempts.
             }
         }
     }
