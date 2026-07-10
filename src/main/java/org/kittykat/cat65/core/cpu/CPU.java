@@ -523,13 +523,17 @@ public class CPU {
         return ((high << 8) | low);
     }
     private int indexedAddress(int address, int i, boolean fixedCycles) {
-        int a = address + i;
-        if ((address & 0xff00) != (a & 0xff00)) {  // check if a page-boundary is crossed
-            // it first reads the byte at the address with the correct low-byte but incorrect high-byte before fixing the high-byte
-            read((address & 0xff00) | (a & 0x00ff));
-            if (!fixedCycles) cycles++;
+        int a = (address + i) & 0xffff;
+
+        boolean pageCrossed = (address & 0xff00) != (a & 0xff00);  // check if a page-boundary is crossed
+        if (pageCrossed || fixedCycles) {  // the dummy read also happens on instructions that always have this extra cycle
+            // on the 65c02, indexed addressing across a page boundary causes it to read
+            // the last instruction byte again instead of reading from an invalid address
+            read((PC - 1) & 0xffff);
         }
-        return a & 0xffff;
+        if (pageCrossed && !fixedCycles) cycles++;
+
+        return a;
     }
 
     private int address_zp() {
@@ -567,9 +571,8 @@ public class CPU {
         return indexedAddress(nextWord(), Y, true);
     }
     private int address_ind() {
-        int i = nextWord();
-        int j = (i + 1) & 0xffff;
-        return (read(i) | (read(j) << 8));
+        int a = nextWord();
+        return (read(a) | (read((a + 1) & 0xffff) << 8));
     }
     private int address_xInd() {
         int a = (nextByte() + X) & 0xff;
@@ -672,6 +675,7 @@ public class CPU {
         int v;
         if (c.hasInput) {
             v = read(c.input) << 1;
+            read(c.input);  // RMW dummy read
             write(c.input, v);
         } else {
             dummyRead();  // dummy read (implied instruction)
@@ -725,6 +729,7 @@ public class CPU {
         int v;
         if (c.hasInput) {
             v = (read(c.input) - 1) & 0xff;
+            read(c.input);  // RMW dummy read
             write(c.input, v);
         } else {
             dummyRead();  // dummy read (implied instruction)
@@ -752,6 +757,7 @@ public class CPU {
         int v;
         if (c.hasInput) {
             v = (read(c.input) + 1) & 0xff;
+            read(c.input);  // RMW dummy read
             write(c.input, v);
         } else {
             dummyRead();  // dummy read (implied instruction)
@@ -794,6 +800,7 @@ public class CPU {
         int v;
         if (c.hasInput) {
             v = read(c.input);
+            read(c.input);  // RMW dummy read
             writeFlag('C', (v & 0x01) != 0);
             v >>= 1;
             write(c.input, v);
@@ -879,6 +886,7 @@ public class CPU {
         int v;
         if (c.hasInput) {
             o = read(c.input);
+            read(c.input);  // RMW dummy read
             v = ((o << 1) | carry) & 0xff;
             write(c.input, v);
         } else {
@@ -895,6 +903,7 @@ public class CPU {
         int v;
         if (c.hasInput) {
             o = read(c.input);
+            read(c.input);  // RMW dummy read
             v = ((o >> 1) | carry) & 0xff;
             write(c.input, v);
         } else {
