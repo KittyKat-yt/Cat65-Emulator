@@ -7,14 +7,16 @@ import static org.junit.jupiter.api.Assertions.*;
 public class CPUArithmeticTests extends CPUTest {
     @Test
     public void testAddWithoutCarry() {
-        loadProgram(0x18,  // clc
+        loadProgram(
+                0x18,  // clc
                 0xa9, 0x02,  // lda #$02
                 0x69, 0x03  // adc #$03
         );
 
         stepInstructions(3);  // clc + lda + adc
-        assertAll(() -> assertEquals(0x05, cpu.getA(), "ADC should correctly add"),
-                  () -> assertFalse(flag('C'), "ADC should clear the carry here")
+        assertAll(
+                () -> assertEquals(0x05, cpu.getA(), "ADC should correctly add"),
+                () -> assertFalse(flag('C'), "ADC should clear the carry here")
         );
     }
     @Test
@@ -26,8 +28,9 @@ public class CPUArithmeticTests extends CPUTest {
         );
 
         stepInstructions(3);  // sec + lda + adc
-        assertAll(() -> assertEquals(0x03, cpu.getA(), "ADC should correctly add with carry"),
-                  () -> assertFalse(flag('C'), "ADC should clear the carry here")
+        assertAll(
+                () -> assertEquals(0x03, cpu.getA(), "ADC should correctly add with carry"),
+                () -> assertFalse(flag('C'), "ADC should clear the carry here")
         );
     }
     @Test
@@ -39,10 +42,11 @@ public class CPUArithmeticTests extends CPUTest {
         );
 
         stepInstructions(3);  // clc + lda + adc
-        assertAll(() -> assertEquals(0x00, cpu.getA(), "ADC should correctly add"),
-                  () -> assertTrue(flag('C'), "ADC should set the carry flag here"),
-                  () -> assertTrue(flag('Z'), "ADC should set the zero flag here"),
-                  () -> assertFalse(flag('V'), "ADC should clear the overflow flag here")
+        assertAll(
+                () -> assertEquals(0x00, cpu.getA(), "ADC should correctly add"),
+                () -> assertTrue(flag('C'), "ADC should set the carry flag here"),
+                () -> assertTrue(flag('Z'), "ADC should set the zero flag here"),
+                () -> assertFalse(flag('V'), "ADC should clear the overflow flag here")
         );
     }
     @Test
@@ -54,10 +58,11 @@ public class CPUArithmeticTests extends CPUTest {
         );
 
         stepInstructions(3);  // clc + lda + adc
-        assertAll(() -> assertEquals(0xa0, cpu.getA(), "ADC should correctly add"),
-                  () -> assertFalse(flag('C'), "ADC should clear the carry flag here"),
-                  () -> assertTrue(flag('V'), "ADC should set the overflow flag here"),
-                  () -> assertTrue(flag('N'), "ADC should set the negative flag here")
+        assertAll(
+                () -> assertEquals(0xa0, cpu.getA(), "ADC should correctly add"),
+                () -> assertFalse(flag('C'), "ADC should clear the carry flag here"),
+                () -> assertTrue(flag('V'), "ADC should set the overflow flag here"),
+                () -> assertTrue(flag('N'), "ADC should set the negative flag here")
         );
     }
 
@@ -70,8 +75,9 @@ public class CPUArithmeticTests extends CPUTest {
         );
 
         stepInstructions(3);  // sec + lda + sbc
-        assertAll(() -> assertEquals(0x40, cpu.getA(), "SBC should correctly subtract"),
-                  () -> assertTrue(flag('C'), "SBC should set the carry here (no borrow)")
+        assertAll(
+                () -> assertEquals(0x40, cpu.getA(), "SBC should correctly subtract"),
+                () -> assertTrue(flag('C'), "SBC should set the carry here (no borrow)")
         );
     }
     @Test
@@ -83,8 +89,9 @@ public class CPUArithmeticTests extends CPUTest {
         );
 
         stepInstructions(3);  // sec + lda + sbc
-        assertAll(() -> assertEquals(0xff, cpu.getA(), "SBC should correctly subtract with borrow"),
-                  () -> assertFalse(flag('C'), "SBC should clear the carry here (borrow)")
+        assertAll(
+                () -> assertEquals(0xff, cpu.getA(), "SBC should correctly subtract with borrow"),
+                () -> assertFalse(flag('C'), "SBC should clear the carry here (borrow)")
         );
     }
     @Test
@@ -96,10 +103,11 @@ public class CPUArithmeticTests extends CPUTest {
         );
 
         stepInstructions(3);  // sec + lda + sbc
-        assertAll(() -> assertEquals(0xa0, cpu.getA(), "SBC should correctly subtract"),
-                  () -> assertFalse(flag('C'), "SBC should clear the carry flag here (borrow)"),
-                  () -> assertTrue(flag('V'), "SBC should set the overflow flag here"),
-                  () -> assertTrue(flag('N'), "SBC should set the negative flag here")
+        assertAll(
+                () -> assertEquals(0xa0, cpu.getA(), "SBC should correctly subtract"),
+                () -> assertFalse(flag('C'), "SBC should clear the carry flag here (borrow)"),
+                () -> assertTrue(flag('V'), "SBC should set the overflow flag here"),
+                () -> assertTrue(flag('N'), "SBC should set the negative flag here")
         );
     }
 
@@ -113,48 +121,78 @@ public class CPUArithmeticTests extends CPUTest {
         );
 
         stepInstructions(2);  // lda + cmp
-        assertAll(() -> assertTrue(flag('C'), "[A > val] CMP should set the carry flag here"),
-                  () -> assertFalse(flag('Z'), "[A > val] CMP should clear the zero flag here"),
-                  () -> assertFalse(flag('N'), "[A > val] CMP should clear the negative flag here")
+        assertAll(
+                () -> assertTrue(flag('C'), "[A > val] CMP should set the carry flag here"),
+                () -> assertFalse(flag('Z'), "[A > val] CMP should clear the zero flag here"),
+                () -> assertFalse(flag('N'), "[A > val] CMP should clear the negative flag here")
         );
 
         stepInstruction();  // cmp
-        assertAll(() -> assertTrue(flag('C'), "[A == val] CMP should set the carry flag here"),
-                  () -> assertTrue(flag('Z'), "[A == val] CMP should set the zero flag here"),
-                  () -> assertFalse(flag('N'), "[A == val] CMP should clear the negative flag here")
+        assertAll(
+                () -> assertTrue(flag('C'), "[A == val] CMP should set the carry flag here"),
+                () -> assertTrue(flag('Z'), "[A == val] CMP should set the zero flag here"),
+                () -> assertFalse(flag('N'), "[A == val] CMP should clear the negative flag here")
         );
 
         stepInstruction();  // cmp
-        assertAll(() -> assertFalse(flag('C'), "[A < val] CMP should clear the carry flag here"),
-                  () -> assertFalse(flag('Z'), "[A < val] CMP should clear the zero flag here"),
-                  () -> assertTrue(flag('N'), "[A < val] CMP should set the negative flag here")
+        assertAll(
+                () -> assertFalse(flag('C'), "[A < val] CMP should clear the carry flag here"),
+                () -> assertFalse(flag('Z'), "[A < val] CMP should clear the zero flag here"),
+                () -> assertTrue(flag('N'), "[A < val] CMP should set the negative flag here")
         );
         assertEquals(0x40, cpu.getA(), "CMP shouldn't change tha value of the A register");
     }
 
     @Test
+    public void testFlags() {
+        // bit 5, 'B', 'N' and 'Z' of the status are ignored by this test
+        load(0x00ff, 0x40);
+        loadProgram(
+                0x38,  // sec
+                0x78,  // sei
+                0xf8,  // sed
+                0x24, 0xff,  // bit $ff
+                0x18,  // clc
+                0x58,  // cli
+                0xb8,  // clv
+                0xd8  // cld
+        );
+
+        stepInstructions(3);  // 3 flag sets
+        assertEquals(0b00001101, cpu.getP() & 0x0d, "the flags should be correctly set");
+
+        stepInstructions(5);  // bit + 4 flag clears
+        assertEquals(0b00000000, cpu.getP() & 0x4d, "the flags should be correctly cleared");
+    }
+
+    @Test
     public void testIncrement() {
         load(0x0090, 0x7f);
-        loadProgram(0xe6, 0x90);  // inc $90
+        loadProgram(
+                0xe6, 0x90  // inc $90
+        );
 
         int cycles = stepInstruction();
-        assertAll(() -> assertEquals(5, cycles, "zero-page INC should take 5 cycles"),
-                  () -> assertEquals(0x80, read(0x0090), "INC should correctly add 1 to the memory value"),
-                  () -> assertTrue(flag('N'), "INC should set the negative flag here")
+        assertAll(
+                () -> assertEquals(5, cycles, "zero-page INC should take 5 cycles"),
+                () -> assertEquals(0x80, read(0x0090), "INC should correctly add 1 to the memory value"),
+                () -> assertTrue(flag('N'), "INC should set the negative flag here")
         );
     }
     @Test
     public void testDecrementX() {
-        loadProgram(0xa2, 1,  // ldx #1
+        loadProgram(
+                0xa2, 1,  // ldx #1
             0xca  // dex
         );
 
         stepInstruction();  // ldx
 
         int cycles = stepInstruction();
-        assertAll(() -> assertEquals(2, cycles, "DEX should take 2 cycles"),
-                  () -> assertEquals(0x00, read(0x0090), "DEX should correctly subtract 1 from X"),
-                  () -> assertTrue(flag('Z'), "INC should set the zero flag here")
+        assertAll(
+                () -> assertEquals(2, cycles, "DEX should take 2 cycles"),
+                () -> assertEquals(0x00, read(0x0090), "DEX should correctly subtract 1 from X"),
+                () -> assertTrue(flag('Z'), "INC should set the zero flag here")
         );
     }
 }

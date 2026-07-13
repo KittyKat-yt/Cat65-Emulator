@@ -10,16 +10,20 @@ public class CPUResetTests extends CPUTest {
         loadVector(VEC_RESET, 0x1234);
         cpu.reset();
 
-        assertAll(() -> assertEquals(7, runToBoundary(), "Reset should take 7 cycles"),
-                  () -> assertEquals(0x1234, cpu.getPC(), "Reset should correctly load the RESET vector"));
+        assertAll(
+                () -> assertEquals(7, runToBoundary(), "Reset should take 7 cycles"),
+                () -> assertEquals(0x1234, cpu.getPC(), "Reset should correctly load the RESET vector")
+        );
     }
 
     @Test
     public void testFlagsReset() {
         loadProgram();
 
-        assertAll(() -> assertTrue(flag('I'), "the interrupt disable flag should be set"),
-                  () -> assertFalse(flag('D'), "the decimal flag should be cleared"));
+        assertAll(
+                () -> assertTrue(flag('I'), "the interrupt disable flag should be set"),
+                () -> assertFalse(flag('D'), "the decimal flag should be cleared")
+        );
     }
 
     @Test
