@@ -40,4 +40,9 @@ public class Cat65 extends Application {
         CMU.startAudioThread();
         CMU.startUiThread();
     }
+
+    public static void main(String[] args) {
+        System.err.println("[!] please start it from Launcher and not from Cat65!");
+        System.exit(-1);
+    }
 }
