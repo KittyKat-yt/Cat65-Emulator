@@ -4,10 +4,10 @@ public interface Bus {
     int  read(int address);
     void write(int address, int value);
 
-    default boolean pollIRQ() {
+    default boolean getIRQ() {
         return true;
     }
-    default boolean pollNMI() {
+    default boolean getNMI() {
         return false;
     }
 }

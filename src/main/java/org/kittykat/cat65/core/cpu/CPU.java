@@ -354,6 +354,10 @@ public class CPU {
     private int P  = 0x00;
     private int PC = 0x0000;
 
+    public int mdr = 0x00;
+
+    private boolean lastNMI = false;
+
     private int     cycles = 0;
     private boolean wait   = false;
     private boolean stop   = false;
@@ -383,13 +387,13 @@ public class CPU {
     public void clock() {
         if (cycles <= 0) {
             if (!stop) {
-                boolean irq = !bus.pollIRQ();
+                boolean irq = !bus.getIRQ();
                 //           ^^^ IRQs are active-low
                 if (irq) {
                     wait = false;
                 }
 
-                if (bus.pollNMI()) {
+                if (pollNMI()) {
                     // NMIs have priority
                     wait = false;
                     hardwareInterrupt(1);
@@ -425,7 +429,7 @@ public class CPU {
         cycles = 7;
 
         nextByte();  // left over BRK read (would read the opcode)
-        nextByte();  // dummy read from BRK
+        nextByte();  // padding byte from BRK
 
         // suppressed stack writes (converted to reads)
         suppressedStackPush();  // PC high byte
@@ -433,10 +437,17 @@ public class CPU {
         suppressedStackPush();  // status register
 
         // Status Flags get reset too
-        P = (P & 0b1100_0011) | 0b0000_0100;
+        P = ((P & 0b1100_0011) | 0b0000_0100);
 
         // read $fffc and $fffd to get the PC
         PC = vectorAddress(0);
+    }
+
+    private boolean pollNMI() {
+        boolean currentNMI = bus.getNMI();
+        boolean nmi = lastNMI && !currentNMI;
+        lastNMI = currentNMI;
+        return nmi;
     }
 
     public int getFlagMask(char flag) {
@@ -479,10 +490,12 @@ public class CPU {
     }
 
     private int  read(int address) {
-        return bus.read(address);
+        mdr = bus.read(address);
+        return mdr;
     }
     private void write(int address, int value) {
-        bus.write(address, value);
+        mdr = value & 0xff;
+        bus.write(address, mdr);
     }
 
     private void incStackPtr() {

@@ -60,6 +60,26 @@ public abstract class CMU {
     private static double sampleTimeAccumulator = 0L;
     private static float  filteredSample = 0f;
 
+    private static final Bus bus = new Bus() {
+        @Override
+        public int read(int address) {
+            return CMU.get(address, true);
+        }
+        @Override
+        public void write(int address, int value) {
+            CMU.set(address, value, true);
+        }
+
+        @Override
+        public boolean getIRQ() {
+            return CMU.getIRQ();
+        }
+        @Override
+        public boolean getNMI() {
+            return CMU.getNMI();
+        }
+    };
+
     private static final int ROM_SIZE = 0x8000;
     private static final byte[] rom = new byte[ROM_SIZE];
     private static final byte[] ram = new byte[0x4000];
@@ -69,25 +89,7 @@ public abstract class CMU {
     private static final ACIA acia = new ACIA();
     private static final VIA  via  = new VIA();
     private static final LCD  lcd  = new LCD();
-    private static final CPU  cpu  = new CPU(new Bus() {
-        @Override
-        public int read(int address) {
-            return CMU.read(address);
-        }
-        @Override
-        public void write(int address, int value) {
-            CMU.write(address, value);
-        }
-
-        @Override
-        public boolean pollIRQ() {
-            return CMU.pollIRQ();
-        }
-        @Override
-        public boolean pollNMI() {
-            return CMU.pollNMI();
-        }
-    });
+    private static final CPU  cpu  = new CPU(bus);
 
     private static ConfigWindow   config;
     private static SerialTerminal terminal;
@@ -101,9 +103,6 @@ public abstract class CMU {
     public  static volatile boolean paused  = true;
     public  static volatile boolean step    = false;
     public  static volatile boolean reset   = true;
-    private static boolean lastNMI = false;
-
-    private static int mdr = 0x00;
 
     private static boolean showDebug = false;
 
@@ -328,7 +327,7 @@ public abstract class CMU {
     }
 
     public static int getMDR() {
-        return mdr;
+        return cpu.mdr;
     }
 
     public static int getPA(int pinState) {
@@ -354,36 +353,24 @@ public abstract class CMU {
         lcd.set(pinState);
     }
 
-    public static boolean pollIRQ() {
+    public static boolean getIRQ() {
         return via.getIRQ() && acia.getIRQ() && exPort04.getIRQ() && exPort07.getIRQ();
     }
-    public static boolean pollNMI() {
-        boolean currentNMI = exPort04.getNMI() && exPort07.getNMI();
-        boolean NMI = lastNMI && !currentNMI;
-        lastNMI = currentNMI;
-        return NMI;
+    public static boolean getNMI() {
+        return exPort04.getNMI() && exPort07.getNMI();
     }
 
-    public static int read(int address) {
-        mdr = get(address, true);
-        return mdr;
-    }
     public static int get(int address, boolean cpu) {
         address &= 0xffff;
         int select = address >> 12;
-        return (switch (select) {
+        return 0xff & (switch (select) {
             case 0x0,0x1,0x2,0x3 -> ram[address];
             case 0x4             -> exPort04.read(address - 0x4000, cpu);
             case 0x5             -> acia.read(address - 0x5000, cpu);
             case 0x6             -> via.read(address - 0x6000, cpu);
             case 0x7             -> exPort07.read(address - 0x7000, cpu);
             default              -> rom[address - 0x8000];
-        }) & 0xff;
-    }
-
-    public static void write(int address, int value) {
-        mdr = (value & 0xff);
-        set(address, mdr, true);
+        });
     }
     public static void set(int address, int value, boolean cpu) {
         address &= 0xffff;

@@ -16,11 +16,11 @@ class TestBus implements Bus {
     }
 
     @Override
-    public boolean pollIRQ() {
+    public boolean getIRQ() {
         return !irq;
     }
     @Override
-    public boolean pollNMI() {
+    public boolean getNMI() {
         boolean edge = nmi;
         nmi = false;
         return edge;
