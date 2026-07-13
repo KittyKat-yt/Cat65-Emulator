@@ -20,25 +20,31 @@ public class Cat65 extends Application {
     }
 
     @Override
+    @SuppressWarnings("CallToPrintStackTrace")
     public void start(Stage mainStage) {
-        ExpansionData.init();
+        try {
+            ExpansionData.init();
 
-        BorderPane root = new BorderPane();
-        root.setId("root");
-        root.setCenter(CMU.makeWindow());
+            BorderPane root = new BorderPane();
+            root.setId("root");
+            root.setCenter(CMU.makeWindow());
 
-        Scene scene = new Scene(root, 1440, 750);
-        EmuHelper.applyCSS(scene);
+            Scene scene = new Scene(root, 1440, 750);
+            EmuHelper.applyCSS(scene);
 
-        mainStage.setTitle("Cat65 Emulator >w<");
-        mainStage.setScene(scene);
-        mainStage.setMaximized(true);
-        mainStage.setOnCloseRequest(event -> stop());
-        mainStage.show();
+            mainStage.setTitle("Cat65 Emulator >w<");
+            mainStage.setScene(scene);
+            mainStage.setMaximized(true);
+            mainStage.setOnCloseRequest(event -> stop());
+            mainStage.show();
 
-        CMU.startClockThread();
-        CMU.startAudioThread();
-        CMU.startUiThread();
+            CMU.startClockThread();
+            CMU.startAudioThread();
+            CMU.startUiThread();
+        } catch (Exception e) {
+            System.err.println("[!] Uncaught exception in Cat65.start()");
+            e.printStackTrace();
+        }
     }
 
     public static void main(String[] args) {
