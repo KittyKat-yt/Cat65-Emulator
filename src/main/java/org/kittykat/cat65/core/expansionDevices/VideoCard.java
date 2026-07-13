@@ -9,6 +9,7 @@ import org.kittykat.cat65.Cat65;
 import org.kittykat.cat65.EmuHelper;
 import org.kittykat.cat65.core.CMU;
 import org.kittykat.cat65.core.ExpansionData;
+import org.kittykat.cat65.ui.window.ConfigWindow;
 import org.kittykat.cat65.ui.window.videoCard.ScreenWindow;
 import org.kittykat.cat65.ui.window.videoCard.VideoSettingsWindow;
 
@@ -62,7 +63,7 @@ public class VideoCard extends ExpansionDevice {
     private volatile int ctrl    = 0b0000_0000;
     private volatile int hScroll = 0x00;
 
-    private volatile double timeAccumulator = 0f;
+    private volatile double timeAccumulator = 0d;
 
     public VideoCard(int portNum) {
         super(0b1111_1111_1111, portNum);
@@ -74,7 +75,7 @@ public class VideoCard extends ExpansionDevice {
     @Override
     @SuppressWarnings("NonAtomicOperationOnVolatileField")
     public void clock() {
-        timeAccumulator += CLOCK_MHZ;
+        timeAccumulator += CLOCK_MHZ * (settings.syncClocks? 1d : (CMU.getTargetClockPeriod() / 1_000d));
         while (timeAccumulator >= 1f) {
             videoClock();
             timeAccumulator -= 1f;

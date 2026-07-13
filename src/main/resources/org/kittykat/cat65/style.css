@@ -1,5 +1,5 @@
 * {
-    -fx-text-fill: #ffffff;
+    -fx-text-fill: #fff;
     -fx-focus-traversable: false;
     -fx-background-radius: 0;
     -fx-border-radius: 0;
@@ -102,6 +102,21 @@
 }
 .button:pressed {
     -fx-background-color: #454545;
+}
+
+.check-box .box {
+    -fx-background-color: #2f2f2f;
+}
+/*
+.check-box .mark {
+    -fx-shape: "M4,4 H12 V12 H4 Z";
+}
+*/
+.check-box:selected .mark {
+    -fx-background-color: #fff;
+}
+.check-box:pressed .mark {
+    -fx-background-color: #aaa;
 }
 
 .combo-box-base {

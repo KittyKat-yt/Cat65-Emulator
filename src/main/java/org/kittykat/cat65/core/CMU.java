@@ -464,8 +464,11 @@ public abstract class CMU {
         return average;
     }
 
+    public static long getTargetClockPeriod() {
+        return config.clockPeriodNanos;
+    }
     public static double getTargetClockSpeed() {
-        return 1_000_000_000d / config.clockPeriodNanos;
+        return (1_000_000_000d / config.clockPeriodNanos);
     }
     public static double getCurrentClockSpeed() {
         long   now         = System.nanoTime();

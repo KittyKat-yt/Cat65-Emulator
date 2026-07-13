@@ -20,6 +20,7 @@ import static org.kittykat.cat65.EmuHelper.makeButton;
 import static org.kittykat.cat65.EmuHelper.makeSetting;
 
 public class ConfigWindow extends Window {
+
     private final FileChooser romChooser = new FileChooser();
 
     public final ObjectProperty<NewLineVariant> newLineVariant = new SimpleObjectProperty<>(NewLineVariant.CR);
@@ -28,7 +29,8 @@ public class ConfigWindow extends Window {
 
     // 1kHz -> 1ms = 1_000_000ns
     // 1MHz -> 1µs = 1_000ns
-    public volatile long clockPeriodNanos = 1_000L;  // 1MHz
+    public static final long DEFAULT_CLOCK_PERIOD = 1_000L;  // 1MHz
+    public volatile long clockPeriodNanos = DEFAULT_CLOCK_PERIOD;
 
     public ConfigWindow() {
         super();
@@ -111,7 +113,7 @@ public class ConfigWindow extends Window {
     }
     private void initClockSpinner(GridPane settings) {
         Label lbl_clockPeriod             = new Label("Clock Period [ns]:");
-        Spinner<Integer> clockPeriodInput = new Spinner<>(850, 100_000_000, 1_000, 1);
+        Spinner<Integer> clockPeriodInput = new Spinner<>(850, 100_000_000, (int) DEFAULT_CLOCK_PERIOD, 1);
         clockPeriodInput.setEditable(true);
 
         IntegerSpinnerValueFactory factory = (IntegerSpinnerValueFactory) clockPeriodInput.getValueFactory();
